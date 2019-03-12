@@ -55,7 +55,7 @@ for(level in unique(df$poutcome)){
   df[paste("poutcome", level, sep = "_")] <- ifelse(df$poutcome == level, 1, 0)
 }
 
-df$Class <- ifelse(df$y=="yes",TRUE,FALSE)
+df$Class <- ifelse(df$y=="true",TRUE,FALSE)
 
 #Remove unwanted columns
 df$X <- NULL
