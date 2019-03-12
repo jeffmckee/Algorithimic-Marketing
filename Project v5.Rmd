@@ -339,11 +339,15 @@ logit_profit/baseline_profit-1
 #install.packages("knnGarden")
 library(knnGarden)
 
-TrnX = full_df[campaign_no <=5,c(58:61,1,17,23)]
-# campaign dummies; age; retired; student
-OrigTrnG = full_df[campaign_no <=5,54]
+#subset for testing purposes
+sub_df <- full_df[1:5000,]
 
-TstX <- NULL
+TrnX <- sub_df[campaign_no <=5,c(58:61,1,17,23)]
+# campaign dummies; age; retired; student
+OrigTrnGdf <- sub_df[campaign_no <=5,54]
+OrigTrnG <- OrigTrnGdf$Class
+
+TstX <- sub_df[campaign_no <=5 & Class==FALSE,54]
 
 knnMCN(TrnX=TrnX,OrigTrnG=OrigTrnG,TstX=TstX,ShowObs=FALSE,K=10)
 
