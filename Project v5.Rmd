@@ -151,7 +151,7 @@ full_df[,campaign4 := ifelse(campaign_no == 4, 1,0)]
 full_df[,campaign5 := ifelse(campaign_no == 5, 1,0)]
 
 
-test_reg <- glm(outcome~campaign2+campaign3+campaign4+campaign5,data=full_df[campaign_no <= 5],family="binomial")
+test_reg <- glm(outcome~campaign2+campaign3+campaign4+campaign5 +age + job_retired + job_student+job_housemaid +marital_divorced,data=full_df[campaign_no <= 5],family="binomial")
 summary(test_reg)
 
 #continue to build out model 
@@ -162,6 +162,18 @@ test_reg_coef <-coef(test_reg)
 ```
 
 
+```{r}
+df_test <- data.table(df_test)
+df_test[,ID := .I]
+
+df_test[,outcome  :=  ifelse(Class       =="TRUE",1,0)]
+df_test[,campaign2 := ifelse(campaign == 2, 1,0)]
+df_test[,campaign3 := ifelse(campaign == 3, 1,0)]
+df_test[,campaign4 := ifelse(campaign == 4, 1,0)]
+df_test[,campaign5 := ifelse(campaign == 5, 1,0)]
+
+
+```
 
 
 ```{r}
@@ -170,7 +182,7 @@ test_reg_coef <-coef(test_reg)
         #Cost- Relevant inputs: hourly wage, average call information (separate averages for failures and successes          b/c they have drastically different lengths)
 
 Compute_Sample_Profitability<-function(obs){
-          sample_person <-full_df[obs]
+          sample_person <-df_test[obs]
           wage <-12 #Estimate of hourly wage 
           fail_time <-mean(df$duration[df$Class=="FALSE"]) / 3600
           success_time <-mean(df$duration[df$Class=="TRUE"]) / 3600
@@ -180,7 +192,7 @@ Compute_Sample_Profitability<-function(obs){
           
   #Output: [cost of failure], [cost of success/signup]
 #Profit from successful customer: According to a paper, CD rates in the Netherlands average ~60% of Euribor rates (https://onlinelibrary.wiley.com/doi/full/10.1111/irfi.12143)
-          Market_rate <-sample_person$euribor3m / 100 
+          Market_rate <-.025 
           CD_rate <-Market_rate*.6
           Balance<-10000 #(simply assumed)
           Term <- .25 #(.25 years, assumed based on rate)
@@ -265,7 +277,9 @@ if(Calls_to_make<=1) {
   Metrics <-c("Euribor","Max Calls","Expected Calls", "Profit")
   values<-c(Market_rate,Calls_to_make,Expected_calls,Expected_profit)
   results <-data.frame(Metrics,values)
-  print(results)
+#  print(results)
+  
+  return(Calls_to_make)
 
 }
 
@@ -273,8 +287,13 @@ if(Calls_to_make<=1) {
 
 
 ```{r}
+df_test$Max_calls<-0
+for (x in 1:8238) {
+df_test$Max_calls[x] <-Compute_Sample_Profitability(x)
+#Insert code on profitability
 
-Compute_Sample_Profitability(77510)
-
+}
+hist(df_test$Max_calls[df_test$ID<=8238])
+#N.B.: time to run 2000 / min
 ```
 
