@@ -1,0 +1,280 @@
+---
+title: "Project"
+author: "Warren Speth"
+date: "March 3, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(caret)
+library(data.table)
+```
+
+
+
+```{r}
+df <- read.csv("bank_additional_full.csv")
+```
+
+
+
+```{r}
+
+#Generate dummy variables
+for(level in unique(df$job)){
+  df[paste("job", level, sep = "_")] <- ifelse(df$job == level, 1, 0)
+}
+
+for(level in unique(df$marital)){
+  df[paste("marital", level, sep = "_")] <- ifelse(df$marital == level, 1, 0)
+}
+
+for(level in unique(df$education)){
+  df[paste("education", level, sep = "_")] <- ifelse(df$education == level, 1, 0)
+}
+
+df$default_yes <- ifelse(df$default == "yes", 1, 0)
+
+df$housing_yes <- ifelse(df$housing == "yes", 1, 0)
+
+df$loan_yes <- ifelse(df$loan == "yes", 1, 0)
+
+for(level in unique(df$contact)){
+  df[paste("contact", level, sep = "_")] <- ifelse(df$contact == level, 1, 0)
+}
+
+for(level in unique(df$month)){
+  df[paste("month", level, sep = "_")] <- ifelse(df$month == level, 1, 0)
+}
+
+for(level in unique(df$poutcome)){
+  df[paste("poutcome", level, sep = "_")] <- ifelse(df$poutcome == level, 1, 0)
+}
+
+df$Class <- ifelse(df$y=="yes",TRUE,FALSE)
+
+#Remove unwanted columns
+df$X <- NULL
+df$job <- NULL
+df$marital <- NULL
+df$education <- NULL
+df$default <- NULL
+df$housing <- NULL
+df$loan <- NULL
+df$contact <- NULL
+df$month <- NULL
+df$poutcome <- NULL
+df$y <- NULL
+
+df$Class <- as.factor((df$Class))
+colnames(df)[11] <- "job_blue_collar"
+colnames(df)[14] <- "job_admin"
+colnames(df)[16] <- "job_self_employeed"
+
+```
+
+```{r}
+
+summary(df)
+str(df)
+table(df$campaign)
+
+barplot(table(df$Class,df$campaign)[2,1:15]/(table(df$Class,df$campaign)[1,1:15]+table(df$Class,df$campaign)[2,1:15]))
+```
+
+
+```{r}
+#Splitting
+set.seed(1)
+training_size <- floor(0.80 * nrow(df))
+train_ind <- sample(seq_len(nrow(df)), size = training_size)
+df_train <- df[train_ind, ]
+df_test <- df[-train_ind, ]
+```
+
+
+
+```{r}
+reg <- glm(Class~.-duration, family="binomial", data=df_train)
+summary(reg)
+```
+
+# Basic prediction exercise 
+High accuracy but mostly driven by high count of true falses
+```{r}
+pred_test <- ifelse(predict(reg, df_test, type="response")>0.5,TRUE,FALSE)
+confusionMatrix(pred_test,df_test$Class)
+```
+
+
+# Simple target top 100
+```{r}
+pred_test1 <- predict(reg, df_test, type="response")
+test1_index <- sort(pred_test1, index.return=TRUE, decreasing=TRUE)$ix[1:100]
+pred_test1tf <- ifelse(pred_test1[test1_index]>0.5,TRUE,FALSE)
+confusionMatrix(pred_test1tf,df_test$Class[test1_index])
+```
+
+# Can we pick those with greater than 50% odds of responding?
+```{r}
+pred_test2 <- predict(reg, df_test, type="response")
+num_true_pred2 <- sum(sort(pred_test2, index.return=TRUE, decreasing=TRUE)$x>0.5)
+test2_index <- sort(pred_test2, index.return=TRUE, decreasing=TRUE)$ix[1:num_true_pred2]
+pred_test2tf <- ifelse(pred_test2[test2_index]>0.5,TRUE,FALSE)
+confusionMatrix(pred_test2tf,df_test$Class[test2_index])
+```
+
+
+# Where to go next for targeting?
+- try kNN clustering on a subset of variables, and do targeting based on clustering vs. discrete response
+- be more precise about which variables we use or don't use for the targeting (e.g. subtracting 1 from campaign)
+- we could take an approach similar to problem set 1 where we analyzed the "lift" from adding these new variables (like the ecom_index from that problem set). in this case, the data is augmented with a couple of columns of "social and economic context attributes" that were not part of the original set
+
+# What other techniques could we explore?
+- the "lift" of making an additional contact (you get more sales in absolute terms, but the conversion percentage goes down [see bar chart above])
+- cost-benefit analysis from contacting people (if we assign costs and benefits to contacting people based on market research)
+- customer segmentation - find similarities between the groups of people that become customers vs. those that don't
+
+
+```{r}
+df <- data.table(df)
+df[,ID := .I]
+full_df <- df[rep(1:.N,campaign)][,campaign_no:=1:.N,by=ID]
+full_df[,outcome:=as.numeric(ifelse(campaign == campaign_no, Class, 1))-1]
+full_df[,campaign2 := ifelse(campaign_no == 2, 1,0)]
+full_df[,campaign3 := ifelse(campaign_no == 3, 1,0)]
+full_df[,campaign4 := ifelse(campaign_no == 4, 1,0)]
+full_df[,campaign5 := ifelse(campaign_no == 5, 1,0)]
+
+
+test_reg <- glm(outcome~campaign2+campaign3+campaign4+campaign5,data=full_df[campaign_no <= 5],family="binomial")
+summary(test_reg)
+
+#continue to build out model 
+
+#From final model: Pull out coefficients (this will be input for prediction/targeting)
+test_reg_coef <-coef(test_reg)
+
+```
+
+
+
+
+```{r}
+#Generate estimates of cost per call, benefit (revenue/profit) of time deposit product for bank
+
+        #Cost- Relevant inputs: hourly wage, average call information (separate averages for failures and successes          b/c they have drastically different lengths)
+
+Compute_Sample_Profitability<-function(obs){
+          sample_person <-full_df[obs]
+          wage <-12 #Estimate of hourly wage 
+          fail_time <-mean(df$duration[df$Class=="FALSE"]) / 3600
+          success_time <-mean(df$duration[df$Class=="TRUE"]) / 3600
+          Inter_call_time <-1/60
+          fail_cost<-wage*(fail_time+Inter_call_time)
+          success_cost <-wage*(success_time+Inter_call_time)
+          
+  #Output: [cost of failure], [cost of success/signup]
+#Profit from successful customer: According to a paper, CD rates in the Netherlands average ~60% of Euribor rates (https://onlinelibrary.wiley.com/doi/full/10.1111/irfi.12143)
+          Market_rate <-sample_person$euribor3m / 100 
+          CD_rate <-Market_rate*.6
+          Balance<-10000 #(simply assumed)
+          Term <- .25 #(.25 years, assumed based on rate)
+          Revenue <- Balance*Term*(Market_rate-CD_rate)  #(roughly a function of not having to borrow this money at market rates, flat curve assumed)
+          Success_profit <-Revenue - success_cost
+
+    #from regression coefficients + person's info: Simple prediction of success likelihood on the nth call "prob(n)" (conditional on failures for all previous calls)
+log_prob <- function(logodds){
+  1/(1+exp(-logodds))
+}
+
+#Loops through prediction turning on campaigns to calculate probabilities of success on calls 1:5
+prob <-rep(NA,5)
+    sample_person$campaign2<-0
+    sample_person$campaign3<-0
+    sample_person$campaign4<-0
+    sample_person$campaign5<-0
+prob[1] <-log_prob(predict(test_reg,sample_person))
+    sample_person$campaign2<-1
+prob[2] <-log_prob(predict(test_reg,sample_person))
+    sample_person$campaign2<-0
+    sample_person$campaign3<-1
+prob[3] <-log_prob(predict(test_reg,sample_person))
+    sample_person$campaign3<-0
+    sample_person$campaign4<-1
+prob[4] <-log_prob(predict(test_reg,sample_person))
+    sample_person$campaign4<-0
+    sample_person$campaign5<-1
+prob[5] <-log_prob(predict(test_reg,sample_person))
+    sample_person$campaign5<-0
+
+
+    #For Calls 1 through N, compute likelihood of success by the nth call: p_sub(n)
+        
+p_sub<-rep(NA,5)
+  p_sub[1]<-prob[1]
+  for (i in 2:5) {
+    p_sub[i] <-p_sub[i-1]+prob[i]*(1-p_sub[i-1])
+  }
+
+  
+  #For calls 1 through N, compute lift of call n: lift(n)= p_sub(n) - p_sub(n-1) (this represents unconditional probability of success on call n)
+lift<-rep(NA,5)
+  lift[1]<-p_sub[1]
+  for (i in 2:5) {
+    lift[i] <-p_sub[i]-p_sub[i-1]
+  }
+  
+#Compute number of calls to target for a given customer (N.B.: As long as probability of success is declining monotonically, as soon as the nth call is not profitable, the (n+1)th call will also not be profitable.) 
+  #Test: Identify whether the nth call (if made) would be profitable. THis is simple:
+   #Profit(n|All calls prior="no")=[Profit of Success]*p_sub(n) -[Cost of Failure]*(1-p_sub(n)) 
+  Profit <- rep(NA,5)
+  for (i in 1:5){
+    Profit[i] <- Success_profit*prob[i]-fail_cost*(1-prob[i])
+  }
+  #Decision: for the first unprofitable call "A," choose  A-1 as the target number of calls.
+  Calls_to_make<-0
+  Calls_to_make <-NROW(Profit[Profit>0])
+  #based out this decision (target customer with A-1 calls), also compute 
+    #(1) the expected number of calls with that rule(this is not simply A-1 b/c customer may sign up earlier), and
+Expected_calls <- 0
+if(Calls_to_make<=1) {
+  Expected_calls<-Calls_to_make
+}  else {
+    for (i in 1:(Calls_to_make-1)){
+      Expected_calls<-Expected_calls+i*lift[i]
+    }
+    Expected_calls<-Expected_calls+Calls_to_make*(1-p_sub[Calls_to_make-1])
+  }
+
+    #(2) the expected profit from this strategy (weighted average of profitabilities forscenarios given this targeting plan, weighting each scenario by lift(n) and then adding together)
+  
+  
+  Expected_profit <- 0
+  if (Calls_to_make>0){
+    for (i in 1:Calls_to_make){
+      Expected_profit <-Expected_profit+lift[i]*(Success_profit-fail_cost*(i-1))
+    }
+    Expected_profit <-Expected_profit-fail_cost*Calls_to_make*(1-p_sub[Calls_to_make])
+  } 
+
+  Metrics <-c("Euribor","Max Calls","Expected Calls", "Profit")
+  values<-c(Market_rate,Calls_to_make,Expected_calls,Expected_profit)
+  results <-data.frame(Metrics,values)
+  print(results)
+
+}
+
+```
+
+
+```{r}
+
+Compute_Sample_Profitability(77510)
+
+```
+
