@@ -151,7 +151,7 @@ full_df[,campaign4 := ifelse(campaign_no == 4, 1,0)]
 full_df[,campaign5 := ifelse(campaign_no == 5, 1,0)]
 
 
-test_reg <- glm(outcome~campaign2+campaign3+campaign4+campaign5 +age + job_retired + job_student+job_housemaid +marital_divorced,data=full_df[campaign_no <= 5],family="binomial")
+test_reg <- glm(outcome~campaign2+campaign3+campaign4+campaign5 +age + job_retired + job_student,data=full_df[campaign_no <= 5],family="binomial")
 summary(test_reg)
 
 #continue to build out model 
@@ -175,14 +175,9 @@ df_test[,campaign5 := ifelse(campaign == 5, 1,0)]
 
 ```
 
-
 ```{r}
-#Generate estimates of cost per call, benefit (revenue/profit) of time deposit product for bank
+#ASSUMPTIONS:
 
-        #Cost- Relevant inputs: hourly wage, average call information (separate averages for failures and successes          b/c they have drastically different lengths)
-
-Compute_Sample_Profitability<-function(obs){
-          sample_person <-df_test[obs]
           wage <-12 #Estimate of hourly wage 
           fail_time <-mean(df$duration[df$Class=="FALSE"]) / 3600
           success_time <-mean(df$duration[df$Class=="TRUE"]) / 3600
@@ -199,6 +194,17 @@ Compute_Sample_Profitability<-function(obs){
           Revenue <- Balance*Term*(Market_rate-CD_rate)  #(roughly a function of not having to borrow this money at market rates, flat curve assumed)
           Success_profit <-Revenue - success_cost
 
+```
+
+```{r}
+#Generate estimates of cost per call, benefit (revenue/profit) of time deposit product for bank
+
+        #Cost- Relevant inputs: hourly wage, average call information (separate averages for failures and successes          b/c they have drastically different lengths)
+
+Compute_Sample_Profitability<-function(obs){
+          sample_person <-df_test[obs]
+          
+          
     #from regression coefficients + person's info: Simple prediction of success likelihood on the nth call "prob(n)" (conditional on failures for all previous calls)
 log_prob <- function(logodds){
   1/(1+exp(-logodds))
@@ -287,13 +293,42 @@ if(Calls_to_make<=1) {
 
 
 ```{r}
+#Predict decisions (max calls to make) for test dataset
+df_test<-df_test[df_test$campaign<=5]
 df_test$Max_calls<-0
-for (x in 1:8238) {
-df_test$Max_calls[x] <-Compute_Sample_Profitability(x)
-#Insert code on profitability
+for (x in 1:nrow(df_test)) {
+  df_test$Max_calls[x] <-Compute_Sample_Profitability(x)
+  }
+
+hist(df_test$Max_calls)
+nrow(df_test[df_test$Max_calls<df_test$campaign])/nrow(df_test)
+
+```
+
+```{r}
+#compute profit of calling all (as called)
+baseline_profit <-0
+for (x in 1:nrow(df_test)) {
+  if(df_test$Class[x]=="FALSE") { baseline_profit<-baseline_profit-df_test$campaign[x]*fail_cost
+                                } else { baseline_profit<-baseline_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost}
+  
+}
+baseline_profit
+#compute profit of implementing strategy?
+logit_profit <-0
+for (x in 1:nrow(df_test)) {
+  if  (df_test$campaign[x]>df_test$Max_calls[x]){
+      -df_test$Max_calls[x]*fail_cost 
+      } else {
+                if(df_test$Class[x]=="FALSE"){ 
+                  logit_profit<-logit_profit-df_test$campaign[x]*fail_cost
+                  } else { logit_profit<-logit_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost}
+              }
 
 }
-hist(df_test$Max_calls[df_test$ID<=8238])
+#Gains
+logit_profit/baseline_profit-1
 #N.B.: time to run 2000 / min
+
 ```
 
