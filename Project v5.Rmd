@@ -1,6 +1,6 @@
 ---
 title: "Project"
-author: "Warren Speth"
+author: "Warren Speth and Jeff"
 date: "March 3, 2019"
 output: html_document
 ---
