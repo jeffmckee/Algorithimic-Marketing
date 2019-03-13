@@ -381,6 +381,7 @@ OrigTrnG <- OrigTrnGdf$Class
 
 TstX <- model_df[10001:12000,c(15:18,2,8,11)]
 
+nnresult <- data.frame("Neighbors" = NULL, "Total_Calls" = NULL, "Good_Calls" = NULL, "Total_Profit" = NULL)
 for (i in 1:20){
   nn <- knn(TrnX, TstX, OrigTrnG, k=i, l = 0, prob=FALSE, use.all = FALSE)
   nn <- cbind(nn,knn_df[10001:12000,4])
@@ -395,13 +396,16 @@ for (i in 1:20){
   nn$failcall <- nn$nn == TRUE & nn$Class == FALSE
   nn$failcost <-0
   nn$failcost[nn$failcall==TRUE] <- fail_cost
+  
+  thisresult <- data.frame("Neighbors" = i ,
+                           "Total_Calls" = sum(nn$call), 
+                           "Good_Calls" = length(nn$match[nn$match==TRUE]),
+                           "Total_Profit" = sum(nn$profit) - sum(nn$failcost)
+                           )
 
-  print(paste("neighbors:", i))
-  print(paste("total calls:",sum(nn$call)))
-  print(paste("good calls:",length(nn$match[nn$match==TRUE])))
-  print(paste("total profit:",sum(nn$profit) - sum(nn$failcost)))
-  print(paste("----------"))
+  nnresult <- rbind(nnresult, thisresult)
 }
+nnresult
 
 ### KNN - euclidean approach using non-blown-out data
 #age, retired, student
@@ -413,6 +417,7 @@ OrigTrnG <- knn_df[1:10000]$Class
 
 TstX <- knn_df[10001:12000,1:3]
 
+nnresult <- data.frame("Neighbors" = NULL, "Total_Calls" = NULL, "Good_Calls" = NULL, "Total_Profit" = NULL)
 for (i in 1:20){
   nn <- knn(TrnX, TstX, OrigTrnG, k=i, l = 0, prob=FALSE, use.all = FALSE)
   nn <- cbind(nn,knn_df[10001:12000,4])
@@ -427,13 +432,16 @@ for (i in 1:20){
   nn$failcall <- nn$nn == TRUE & nn$Class == FALSE
   nn$failcost <-0
   nn$failcost[nn$failcall==TRUE] <- fail_cost
+  
+  thisresult <- data.frame("Neighbors" = i ,
+                           "Total_Calls" = sum(nn$call), 
+                           "Good_Calls" = length(nn$match[nn$match==TRUE]),
+                           "Total_Profit" = sum(nn$profit) - sum(nn$failcost)
+                           )
 
-  print(paste("neighbors:", i))
-  print(paste("total calls:",sum(nn$call)))
-  print(paste("good calls:",length(nn$match[nn$match==TRUE])))
-  print(paste("total profit:",sum(nn$profit) - sum(nn$failcost)))
-  print(paste("----------"))
+  nnresult <- rbind(nnresult, thisresult)
 }
+nnresult
 
 ### KNN with Mahalanobis distances: computationally taxing; cannot compute enough to compare against model
 ## first Mahalanobis approach: knnGarden package
