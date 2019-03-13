@@ -73,7 +73,7 @@ df <- read.csv("bank_additional_full.csv")
 
 df <- as.data.table(model.matrix(~.-1,df))
 # colnames(df)[colnames(df)=="ytrue"] <- "outcome"
-df$Class <- ifelse(df$y=="true",TRUE,FALSE)
+df$Class <- ifelse(df$ytrue==1,TRUE,FALSE)
 ```
 
 ```{r}
@@ -147,12 +147,13 @@ full_df[,campaign2 := ifelse(campaign_no == 2, 1,0)]
 full_df[,campaign3 := ifelse(campaign_no == 3, 1,0)]
 full_df[,campaign4 := ifelse(campaign_no == 4, 1,0)]
 full_df[,campaign5 := ifelse(campaign_no == 5, 1,0)]
-model_df<-full_df[campaign_no<=5,c(56,1:23,59:62)]
+model_df<-full_df[campaign_no<=5,c(56,1:13,59:62)]
+#56,1:23,59:62
 ```
 
 ```{r}
 
-test_reg <- glm(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5,data=model_df,family="binomial")
+test_reg <- glm(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5,data=model_df,family="binomial",control = list(maxit = 50))
 summary(test_reg)
 
 #continue to build out model 
