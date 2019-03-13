@@ -334,28 +334,41 @@ logit_profit/baseline_profit-1
 
 
 ```{r}
-#KNN stuff - attempt at using knnGarden package
+### KNN - euclidean approach. when using full_df, there are no predicted conversions
+sub_df <- full_df[1:50000,]
 
-#install.packages("knnGarden")
-library(knnGarden)
-
-#subset for dev purposes
-sub_df <- full_df[1:10000,]
-
+# campaign dummies; age; retired; student. adjust to match other models
 TrnX <- sub_df[campaign_no <=5,c(58:61,1,17,23)]
-# campaign dummies; age; retired; student
-#TrnX <- sub_df[campaign_no <=5,c(1,17,23)]
 
 OrigTrnGdf <- sub_df[campaign_no <=5,54]
 OrigTrnG <- OrigTrnGdf$Class
 
-#TstX <- sub_df[campaign_no <=5 & Class==FALSE,54]
-sub_TstX <- full_df[20000:25000]
+sub_TstX <- full_df[50001:60000]
 TstX <- sub_TstX[campaign_no <=5,c(58:61,1,17,23)]
 
+for (i in 1:20){
+  nn <- knn(TrnX, TstX, OrigTrnG, k=i, l = 0, prob=FALSE, use.all = TRUE)
+  print(summary(nn))
+}
+
+### KNN - euclidean approach using non-blown-out data
+TrnX <- df_train[df_train$campaign <=5,c(1,17,23)]
+OrigTrnG <- df_train[df_train$campaign <=5,54]
+
+TstX <- df_test[df_test$campaign <=5,c(1,17,23)]
+
+for (i in 1:20){
+  nn <- knn(TrnX, TstX, OrigTrnG, k=i, l = 0, prob=FALSE, use.all = FALSE)
+  print(summary(nn))
+}
+
+### KNN stuff that Verdon couldn't get to work
+## first Mahalanobis approach: knnGarden package
+#install.packages("knnGarden")
+library(knnGarden)
 knnMCN(TrnX=TrnX,OrigTrnG=OrigTrnG,TstX=TstX,ShowObs=FALSE,K=1)
 
-
+## second Mahalanobis approach: pvclass package. computationally taxing; subsetted to 1000 rows in dev 
+library(pvclass)
+knnout <- cvpvs.knn(TrnX, OrigTrnG, k = 2, distance = 'mahalanobis', cova = 'standard')
 ```
-
-
