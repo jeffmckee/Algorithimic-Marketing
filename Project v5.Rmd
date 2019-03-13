@@ -328,7 +328,36 @@ for (x in 1:nrow(df_test)) {
 }
 #Gains
 logit_profit/baseline_profit-1
-#N.B.: time to run 2000 / min
+
+three_call_profit <-0
+for (x in 1:nrow(df_test)) {
+  if  (df_test$campaign[x]>3){
+      -3*fail_cost 
+      } else {
+                if(df_test$Class[x]=="FALSE"){ 
+                  three_call_profit<-three_call_profit-df_test$campaign[x]*fail_cost
+                  } else { three_call_profit<-three_call_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost}
+              }
+
+}
+
+two_call_profit <-0
+for (x in 1:nrow(df_test)) {
+  if  (df_test$campaign[x]>2){
+      -2*fail_cost 
+      } else {
+                if(df_test$Class[x]=="FALSE"){ 
+                  two_call_profit<-two_call_profit-df_test$campaign[x]*fail_cost
+                  } else { two_call_profit<-two_call_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost}
+              }
+
+}
+two_call_profit
+three_call_profit
+logit_profit
+baseline_profit
+#alt model - make 3 calls to everyone
+
 
 ```
 
