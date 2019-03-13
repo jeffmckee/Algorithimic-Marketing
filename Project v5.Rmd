@@ -447,9 +447,9 @@ nnresult
 ## first Mahalanobis approach: knnGarden package
 #install.packages("knnGarden")
 library(knnGarden)
-knnMCN(TrnX=TrnX,OrigTrnG=OrigTrnG,TstX=TstX,ShowObs=FALSE,K=1)
+knnMCN(TrnX=TrnX[1:1000,],OrigTrnG=OrigTrnG[1:1000],TstX=TstX[1:200,],ShowObs=FALSE,K=1)
 
 ## second Mahalanobis approach: pvclass package. computationally taxing; subsetted to 1000 rows in dev 
 library(pvclass)
-knnout <- cvpvs.knn(TrnX, OrigTrnG, k = 1, distance = 'mahalanobis', cova = 'standard')
+knnout <- cvpvs.knn(TrnX[1:1000], OrigTrnG[1:1000], k = 1, distance = 'mahalanobis', cova = 'standard')
 ```
