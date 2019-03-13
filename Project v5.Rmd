@@ -12,68 +12,67 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(caret)
 library(data.table)
+library(glmnet)
 ```
-
 
 
 ```{r}
 df <- read.csv("bank_additional_full.csv")
-```
 
+# 
+# #Generate dummy variables
+# for(level in unique(df$job)){
+#   df[paste("job", level, sep = "_")] <- ifelse(df$job == level, 1, 0)
+# }
+# 
+# for(level in unique(df$marital)){
+#   df[paste("marital", level, sep = "_")] <- ifelse(df$marital == level, 1, 0)
+# }
+# 
+# for(level in unique(df$education)){
+#   df[paste("education", level, sep = "_")] <- ifelse(df$education == level, 1, 0)
+# }
+# 
+# df$default_yes <- ifelse(df$default == "yes", 1, 0)
+# 
+# df$housing_yes <- ifelse(df$housing == "yes", 1, 0)
+# 
+# df$loan_yes <- ifelse(df$loan == "yes", 1, 0)
+# 
+# for(level in unique(df$contact)){
+#   df[paste("contact", level, sep = "_")] <- ifelse(df$contact == level, 1, 0)
+# }
+# 
+# for(level in unique(df$month)){
+#   df[paste("month", level, sep = "_")] <- ifelse(df$month == level, 1, 0)
+# }
+# 
+# for(level in unique(df$poutcome)){
+#   df[paste("poutcome", level, sep = "_")] <- ifelse(df$poutcome == level, 1, 0)
+# }
+# 
+# df$Class <- ifelse(df$y=="true",TRUE,FALSE)
+# 
+# #Remove unwanted columns
+# df$X <- NULL
+# df$job <- NULL
+# df$marital <- NULL
+# df$education <- NULL
+# df$default <- NULL
+# df$housing <- NULL
+# df$loan <- NULL
+# df$contact <- NULL
+# df$month <- NULL
+# df$poutcome <- NULL
+# df$y <- NULL
+# 
+# df$Class <- as.factor((df$Class))
+# colnames(df)[11] <- "job_blue_collar"
+# colnames(df)[14] <- "job_admin"
+# colnames(df)[16] <- "job_self_employeed"
 
-
-```{r}
-
-#Generate dummy variables
-for(level in unique(df$job)){
-  df[paste("job", level, sep = "_")] <- ifelse(df$job == level, 1, 0)
-}
-
-for(level in unique(df$marital)){
-  df[paste("marital", level, sep = "_")] <- ifelse(df$marital == level, 1, 0)
-}
-
-for(level in unique(df$education)){
-  df[paste("education", level, sep = "_")] <- ifelse(df$education == level, 1, 0)
-}
-
-df$default_yes <- ifelse(df$default == "yes", 1, 0)
-
-df$housing_yes <- ifelse(df$housing == "yes", 1, 0)
-
-df$loan_yes <- ifelse(df$loan == "yes", 1, 0)
-
-for(level in unique(df$contact)){
-  df[paste("contact", level, sep = "_")] <- ifelse(df$contact == level, 1, 0)
-}
-
-for(level in unique(df$month)){
-  df[paste("month", level, sep = "_")] <- ifelse(df$month == level, 1, 0)
-}
-
-for(level in unique(df$poutcome)){
-  df[paste("poutcome", level, sep = "_")] <- ifelse(df$poutcome == level, 1, 0)
-}
-
-df$Class <- ifelse(df$y=="true",TRUE,FALSE)
-
-#Remove unwanted columns
-df$X <- NULL
-df$job <- NULL
-df$marital <- NULL
-df$education <- NULL
-df$default <- NULL
-df$housing <- NULL
-df$loan <- NULL
-df$contact <- NULL
-df$month <- NULL
-df$poutcome <- NULL
-df$y <- NULL
-
-df$Class <- as.factor((df$Class))
-colnames(df)[11] <- "job_blue_collar"
-colnames(df)[14] <- "job_admin"
-colnames(df)[16] <- "job_self_employeed"
+df <- as.data.table(model.matrix(~.-1,df))
+colnames(df)[colnames(df)=="ytrue"] <- "outcome"
 
 ```
 
@@ -83,49 +82,49 @@ summary(df)
 str(df)
 table(df$campaign)
 
-barplot(table(df$Class,df$campaign)[2,1:15]/(table(df$Class,df$campaign)[1,1:15]+table(df$Class,df$campaign)[2,1:15]))
+barplot(table(df$outcome,df$campaign)[2,1:15]/(table(df$outcome,df$campaign)[1,1:15]+table(df$outcome,df$campaign)[2,1:15]))
 ```
 
 
 ```{r}
-#Splitting
-set.seed(1)
-training_size <- floor(0.80 * nrow(df))
-train_ind <- sample(seq_len(nrow(df)), size = training_size)
-df_train <- df[train_ind, ]
-df_test <- df[-train_ind, ]
+# #Splitting
+# set.seed(1)
+# training_size <- floor(0.80 * nrow(df))
+# train_ind <- sample(seq_len(nrow(df)), size = training_size)
+# df_train <- df[train_ind, ]
+# df_test <- df[-train_ind, ]
 ```
 
 
 
 ```{r}
-reg <- glm(Class~.-duration, family="binomial", data=df_train)
-summary(reg)
+# reg <- glm(outcome~.-duration, family="binomial", data=df_train)
+# summary(reg)
 ```
 
 # Basic prediction exercise 
 High accuracy but mostly driven by high count of true falses
 ```{r}
-pred_test <- ifelse(predict(reg, df_test, type="response")>0.5,TRUE,FALSE)
-confusionMatrix(pred_test,df_test$Class)
+# pred_test <- ifelse(predict(reg, df_test, type="response")>0.5,TRUE,FALSE)
+# confusionMatrix(pred_test,df_test$Class)
 ```
 
 
 # Simple target top 100
 ```{r}
-pred_test1 <- predict(reg, df_test, type="response")
-test1_index <- sort(pred_test1, index.return=TRUE, decreasing=TRUE)$ix[1:100]
-pred_test1tf <- ifelse(pred_test1[test1_index]>0.5,TRUE,FALSE)
-confusionMatrix(pred_test1tf,df_test$Class[test1_index])
+# pred_test1 <- predict(reg, df_test, type="response")
+# test1_index <- sort(pred_test1, index.return=TRUE, decreasing=TRUE)$ix[1:100]
+# pred_test1tf <- ifelse(pred_test1[test1_index]>0.5,TRUE,FALSE)
+# confusionMatrix(pred_test1tf,df_test$Class[test1_index])
 ```
 
 # Can we pick those with greater than 50% odds of responding?
 ```{r}
-pred_test2 <- predict(reg, df_test, type="response")
-num_true_pred2 <- sum(sort(pred_test2, index.return=TRUE, decreasing=TRUE)$x>0.5)
-test2_index <- sort(pred_test2, index.return=TRUE, decreasing=TRUE)$ix[1:num_true_pred2]
-pred_test2tf <- ifelse(pred_test2[test2_index]>0.5,TRUE,FALSE)
-confusionMatrix(pred_test2tf,df_test$Class[test2_index])
+# pred_test2 <- predict(reg, df_test, type="response")
+# num_true_pred2 <- sum(sort(pred_test2, index.return=TRUE, decreasing=TRUE)$x>0.5)
+# test2_index <- sort(pred_test2, index.return=TRUE, decreasing=TRUE)$ix[1:num_true_pred2]
+# pred_test2tf <- ifelse(pred_test2[test2_index]>0.5,TRUE,FALSE)
+# confusionMatrix(pred_test2tf,df_test$Class[test2_index])
 ```
 
 
@@ -141,17 +140,19 @@ confusionMatrix(pred_test2tf,df_test$Class[test2_index])
 
 
 ```{r}
-df <- data.table(df)
 df[,ID := .I]
 full_df <- df[rep(1:.N,campaign)][,campaign_no:=1:.N,by=ID]
-full_df[,outcome:=as.numeric(ifelse(campaign == campaign_no, Class, 1))-1]
+full_df[campaign != campaign_no,'outcome'] <- 0
 full_df[,campaign2 := ifelse(campaign_no == 2, 1,0)]
 full_df[,campaign3 := ifelse(campaign_no == 3, 1,0)]
 full_df[,campaign4 := ifelse(campaign_no == 4, 1,0)]
 full_df[,campaign5 := ifelse(campaign_no == 5, 1,0)]
+model_df<-full_df[campaign_no<=5,c(55,1:23,58:61)]
+```
 
+```{r}
 
-test_reg <- glm(outcome~campaign2+campaign3+campaign4+campaign5 +age + job_retired + job_student,data=full_df[campaign_no <= 5],family="binomial")
+test_reg <- glm(outcome~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5,data=model_df,family="binomial")
 summary(test_reg)
 
 #continue to build out model 
