@@ -329,34 +329,76 @@ for (x in 1:nrow(df_test)) {
 }
 #Gains
 logit_profit/baseline_profit-1
-#N.B.: time to run 2000 / min
+
+three_call_profit <-0
+for (x in 1:nrow(df_test)) {
+  if  (df_test$campaign[x]>3){
+      -3*fail_cost 
+      } else {
+                if(df_test$Class[x]=="FALSE"){ 
+                  three_call_profit<-three_call_profit-df_test$campaign[x]*fail_cost
+                  } else { three_call_profit<-three_call_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost}
+              }
+
+}
+
+two_call_profit <-0
+for (x in 1:nrow(df_test)) {
+  if  (df_test$campaign[x]>2){
+      -2*fail_cost 
+      } else {
+                if(df_test$Class[x]=="FALSE"){ 
+                  two_call_profit<-two_call_profit-df_test$campaign[x]*fail_cost
+                  } else { two_call_profit<-two_call_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost}
+              }
+
+}
+two_call_profit
+three_call_profit
+logit_profit
+baseline_profit
+#alt model - make 3 calls to everyone
+
 
 ```
 
 
 ```{r}
-#KNN stuff - attempt at using knnGarden package
+### KNN - euclidean approach. when using full_df, there are no predicted conversions
+sub_df <- full_df[1:50000,]
 
-#install.packages("knnGarden")
-library(knnGarden)
-
-#subset for dev purposes
-sub_df <- full_df[1:10000,]
-
+# campaign dummies; age; retired; student. adjust to match other models
 TrnX <- sub_df[campaign_no <=5,c(58:61,1,17,23)]
-# campaign dummies; age; retired; student
-#TrnX <- sub_df[campaign_no <=5,c(1,17,23)]
 
 OrigTrnGdf <- sub_df[campaign_no <=5,54]
 OrigTrnG <- OrigTrnGdf$Class
 
-#TstX <- sub_df[campaign_no <=5 & Class==FALSE,54]
-sub_TstX <- full_df[20000:25000]
+sub_TstX <- full_df[50001:60000]
 TstX <- sub_TstX[campaign_no <=5,c(58:61,1,17,23)]
 
+for (i in 1:20){
+  nn <- knn(TrnX, TstX, OrigTrnG, k=i, l = 0, prob=FALSE, use.all = TRUE)
+  print(summary(nn))
+}
+
+### KNN - euclidean approach using non-blown-out data
+TrnX <- df_train[df_train$campaign <=5,c(1,17,23)]
+OrigTrnG <- df_train[df_train$campaign <=5,54]
+
+TstX <- df_test[df_test$campaign <=5,c(1,17,23)]
+
+for (i in 1:20){
+  nn <- knn(TrnX, TstX, OrigTrnG, k=i, l = 0, prob=FALSE, use.all = FALSE)
+  print(summary(nn))
+}
+
+### KNN stuff that Verdon couldn't get to work
+## first Mahalanobis approach: knnGarden package
+#install.packages("knnGarden")
+library(knnGarden)
 knnMCN(TrnX=TrnX,OrigTrnG=OrigTrnG,TstX=TstX,ShowObs=FALSE,K=1)
 
-
+## second Mahalanobis approach: pvclass package. computationally taxing; subsetted to 1000 rows in dev 
+library(pvclass)
+knnout <- cvpvs.knn(TrnX, OrigTrnG, k = 2, distance = 'mahalanobis', cova = 'standard')
 ```
-
-
