@@ -62,9 +62,18 @@ df$Class <- ifelse(df$ytrue==1,TRUE,FALSE)
 df[,ID := .I]
 
 #split into test and train
+set.seed(99)
+training_size <- floor(0.80 * nrow(df))
+train_ind <- sample(seq_len(nrow(df)), size = training_size)
 
-#
-full_df <- df[rep(1:.N,campaign)][,campaign_no:=1:.N,by=ID]
+df_train <- df[train_ind, ]
+
+df_test <- df[-train_ind, ]
+
+
+
+# Work on training data
+full_df <- df_train[rep(1:.N,campaign)][,campaign_no:=1:.N,by=ID]
 full_df[campaign != campaign_no,'Class'] <- FALSE
 full_df[,campaign2 := ifelse(campaign_no == 2, 1,0)]
 full_df[,campaign3 := ifelse(campaign_no == 3, 1,0)]
@@ -73,6 +82,15 @@ full_df[,campaign5 := ifelse(campaign_no == 5, 1,0)]
 model_df<-full_df[campaign_no<=5,c(56,1:30,47:49, 59:62)]
 x_matrix <- model.matrix(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5-1,data=model_df)
 
+#work on testing data
+
+
+df_test[,outcome  :=  ifelse(Class       =="TRUE",1,0)]
+df_test[,campaign2 := ifelse(campaign == 2, 1,0)]
+df_test[,campaign3 := ifelse(campaign == 3, 1,0)]
+df_test[,campaign4 := ifelse(campaign == 4, 1,0)]
+df_test[,campaign5 := ifelse(campaign == 5, 1,0)]
+df_test$campaign[df_test$campaign>5]<-5
 ```
 ```{r}
 #split model
@@ -92,19 +110,6 @@ test_reg_coef <-coef(test_reg)
 
 ```
 
-
-```{r}
-df_test <- data.table(df_test)
-df_test[,ID := .I]
-
-df_test[,outcome  :=  ifelse(Class       =="TRUE",1,0)]
-df_test[,campaign2 := ifelse(campaign == 2, 1,0)]
-df_test[,campaign3 := ifelse(campaign == 3, 1,0)]
-df_test[,campaign4 := ifelse(campaign == 4, 1,0)]
-df_test[,campaign5 := ifelse(campaign == 5, 1,0)]
-
-
-```
 
 ```{r}
 #ASSUMPTIONS:
@@ -381,11 +386,6 @@ knnout <- cvpvs.knn(TrnX[1:1000], OrigTrnG[1:1000], k = 1, distance = 'mahalanob
 
 #Splitting
 ```{r}
-set.seed(99)
-training_size <- floor(0.80 * nrow(df))
-train_ind <- sample(seq_len(nrow(df)), size = training_size)
-df_train <- df[train_ind, ]
-df_test <- df[-train_ind, ]
 ```
 
 
