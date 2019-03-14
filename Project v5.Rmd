@@ -22,57 +22,9 @@ log_prob <- function(pred){
 ```{r}
 df <- read.csv("bank_additional_full.csv")
 
-# 
-# #Generate dummy variables
-# for(level in unique(df$job)){
-#   df[paste("job", level, sep = "_")] <- ifelse(df$job == level, 1, 0)
-# }
-# 
-# for(level in unique(df$marital)){
-#   df[paste("marital", level, sep = "_")] <- ifelse(df$marital == level, 1, 0)
-# }
-# 
-# for(level in unique(df$education)){
-#   df[paste("education", level, sep = "_")] <- ifelse(df$education == level, 1, 0)
-# }
-# 
-# df$default_yes <- ifelse(df$default == "yes", 1, 0)
-# 
-# df$housing_yes <- ifelse(df$housing == "yes", 1, 0)
-# 
-# df$loan_yes <- ifelse(df$loan == "yes", 1, 0)
-# 
-# for(level in unique(df$contact)){
-#   df[paste("contact", level, sep = "_")] <- ifelse(df$contact == level, 1, 0)
-# }
-# 
-# for(level in unique(df$month)){
-#   df[paste("month", level, sep = "_")] <- ifelse(df$month == level, 1, 0)
-# }
-# 
-# for(level in unique(df$poutcome)){
-#   df[paste("poutcome", level, sep = "_")] <- ifelse(df$poutcome == level, 1, 0)
-# }
-# 
+levels(df$job)[2] <- "bluecollar"
+levels(df$job)[7] <- "selfemployed"
 
-# 
-# #Remove unwanted columns
-# df$X <- NULL
-# df$job <- NULL
-# df$marital <- NULL
-# df$education <- NULL
-# df$default <- NULL
-# df$housing <- NULL
-# df$loan <- NULL
-# df$contact <- NULL
-# df$month <- NULL
-# df$poutcome <- NULL
-# df$y <- NULL
-# 
-# df$Class <- as.factor((df$Class))
-# colnames(df)[11] <- "job_blue_collar"
-# colnames(df)[14] <- "job_admin"
-# colnames(df)[16] <- "job_self_employeed"
 
 df <- as.data.table(model.matrix(~.-1,df))
 # colnames(df)[colnames(df)=="ytrue"] <- "outcome"
