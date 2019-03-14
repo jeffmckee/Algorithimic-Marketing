@@ -81,9 +81,6 @@ df_test[,campaign4 := ifelse(campaign == 4, 1,0)]
 df_test[,campaign5 := ifelse(campaign == 5, 1,0)]
 df_test$campaign[df_test$campaign>5]<-5
 ```
-```{r}
-#split model
-```
 
 ```{r}
 #cv_enet <- cv.glmnet(x=x_matrix, y=model_df$Class, family="binomial")
