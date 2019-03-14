@@ -60,15 +60,22 @@ df$Class <- ifelse(df$ytrue==1,TRUE,FALSE)
 
 ```{r}
 df[,ID := .I]
+
+#split into test and train
+
+#
 full_df <- df[rep(1:.N,campaign)][,campaign_no:=1:.N,by=ID]
 full_df[campaign != campaign_no,'Class'] <- FALSE
 full_df[,campaign2 := ifelse(campaign_no == 2, 1,0)]
 full_df[,campaign3 := ifelse(campaign_no == 3, 1,0)]
 full_df[,campaign4 := ifelse(campaign_no == 4, 1,0)]
 full_df[,campaign5 := ifelse(campaign_no == 5, 1,0)]
-model_df<-full_df[campaign_no<=5,c(56,1:13,59:62)]
+model_df<-full_df[campaign_no<=5,c(56,1:30,47:49, 59:62)]
 x_matrix <- model.matrix(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5-1,data=model_df)
 
+```
+```{r}
+#split model
 ```
 
 ```{r}
