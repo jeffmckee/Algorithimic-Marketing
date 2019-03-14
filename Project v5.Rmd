@@ -78,15 +78,12 @@ x_matrix <- model.matrix(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5
 #work on testing data
 
 
-<<<<<<< HEAD
-=======
 df_test[,outcome  :=  ifelse(Class       =="TRUE",1,0)]
 df_test[,campaign2 := ifelse(campaign == 2, 1,0)]
 df_test[,campaign3 := ifelse(campaign == 3, 1,0)]
 df_test[,campaign4 := ifelse(campaign == 4, 1,0)]
 df_test[,campaign5 := ifelse(campaign == 5, 1,0)]
 df_test$campaign[df_test$campaign>5]<-5
->>>>>>> a95208ba95f793132812f6a5217672fa3c3e14ee
 ```
 
 ```{r}
@@ -94,7 +91,7 @@ df_test$campaign[df_test$campaign>5]<-5
 best_lambda <- 0.0007920194
 enet <- glmnet(x=x_matrix, y=model_df$Class, family="binomial")
 
-test_reg <- glm(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5,data=model_df,family="binomial",control = list(maxit = 50))
+#test_reg <- glm(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5,data=model_df,family="binomial",control = list(maxit = 50))
 ```
 
 
@@ -315,10 +312,11 @@ if(Calls_to_make<=1) {
 
 ```{r}
 #Predict decisions (max calls to make) for test dataset
-df_test<-df_test[df_test$campaign<=5]
+
 df_test$Max_calls<-0
-for (x in 1:nrow(df_test)) {
-  df_test$Max_calls[x] <-Compute_Sample_Profitability(x)
+
+for (x in 1:1000) {
+  df_test$Max_calls[x] <-Compute_Sample_Profitability_LASSO(x)
   }
 
 hist(df_test$Max_calls)
@@ -347,6 +345,21 @@ for (x in 1:nrow(df_test)) {
               }
 
 }
+
+#lasso profit
+lasso_profit <-0
+for (x in 1:1000) {
+  if  (df_test$campaign[x]>df_test$Max_calls[x]){
+      -df_test$Max_calls[x]*fail_cost 
+      } else {
+                if(df_test$Class[x]=="FALSE"){ 
+                  lasso_profit<-lasso_profit-df_test$campaign[x]*fail_cost
+                  } else { lasso_profit<-lasso_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost}
+              }
+
+}
+lasso_profit
+
 #Gains
 logit_profit/baseline_profit-1
 
