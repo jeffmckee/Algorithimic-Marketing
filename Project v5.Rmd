@@ -13,6 +13,12 @@ knitr::opts_chunk$set(echo = TRUE)
 library(caret)
 library(data.table)
 library(glmnet)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(xgboost)
+library(gbm)
+
 log_prob <- function(pred){
   1/(1+exp(-pred))
 }
@@ -38,48 +44,6 @@ df$Class <- ifelse(df$ytrue==1,TRUE,FALSE)
 # table(df$campaign)
 # 
 # barplot(table(df$Class,df$campaign)[2,1:15]/(table(df$Class,df$campaign)[1,1:15]+table(df$Class,df$campaign)[2,1:15]))
-```
-
-
-```{r}
-# #Splitting
-# set.seed(1)
-# training_size <- floor(0.80 * nrow(df))
-# train_ind <- sample(seq_len(nrow(df)), size = training_size)
-# df_train <- df[train_ind, ]
-# df_test <- df[-train_ind, ]
-```
-
-
-
-```{r}
-# reg <- glm(outcome~.-duration, family="binomial", data=df_train)
-# summary(reg)
-```
-
-# Basic prediction exercise 
-High accuracy but mostly driven by high count of true falses
-```{r}
-# pred_test <- ifelse(predict(reg, df_test, type="response")>0.5,TRUE,FALSE)
-# confusionMatrix(pred_test,df_test$Class)
-```
-
-
-# Simple target top 100
-```{r}
-# pred_test1 <- predict(reg, df_test, type="response")
-# test1_index <- sort(pred_test1, index.return=TRUE, decreasing=TRUE)$ix[1:100]
-# pred_test1tf <- ifelse(pred_test1[test1_index]>0.5,TRUE,FALSE)
-# confusionMatrix(pred_test1tf,df_test$Class[test1_index])
-```
-
-# Can we pick those with greater than 50% odds of responding?
-```{r}
-# pred_test2 <- predict(reg, df_test, type="response")
-# num_true_pred2 <- sum(sort(pred_test2, index.return=TRUE, decreasing=TRUE)$x>0.5)
-# test2_index <- sort(pred_test2, index.return=TRUE, decreasing=TRUE)$ix[1:num_true_pred2]
-# pred_test2tf <- ifelse(pred_test2[test2_index]>0.5,TRUE,FALSE)
-# confusionMatrix(pred_test2tf,df_test$Class[test2_index])
 ```
 
 
@@ -405,3 +369,102 @@ knnMCN(TrnX=TrnX[1:1000,],OrigTrnG=OrigTrnG[1:1000],TstX=TstX[1:200,],ShowObs=FA
 library(pvclass)
 knnout <- cvpvs.knn(TrnX[1:1000], OrigTrnG[1:1000], k = 1, distance = 'mahalanobis', cova = 'standard')
 ```
+
+
+
+#Splitting
+```{r}
+set.seed(99)
+training_size <- floor(0.80 * nrow(df))
+train_ind <- sample(seq_len(nrow(df)), size = training_size)
+df_train <- df[train_ind, ]
+df_test <- df[-train_ind, ]
+```
+
+
+## Regression Tree
+```{r}
+set.seed(99)
+fit1 = rpart(lnSalePrice~., data=train, control=rpart.control(minsplit=5, cp=0.0001, xval=10))
+
+nbig = length(unique(fit1$where))
+cat('Size of big tree: ',nbig,'\n')
+
+cat('RMSE=',sqrt(mean((test$lnSalePrice-predict(fit1,test))^2)),'\n')
+
+(cptable = printcp(fit1))
+(bestcp = cptable[ which.min(cptable[,"xerror"]), "CP" ])   
+fit1B = prune(fit1,cp=bestcp)
+nbigB = length(unique(fit1B$where))
+cat('Size of pruned tree: ',nbigB,'\n')
+
+cat('RMSE=',sqrt(mean((test$lnSalePrice-predict(fit1B,test))^2)),'\n')
+```
+
+
+## Random Forest
+```{r tree all vars, echo=FALSE}
+set.seed(99)
+fit2 <- randomForest(lnSalePrice~., data=train, ntree=400)
+cat('RMSE is ',sqrt(mean((test$lnSalePrice - (predict(fit2, test)))^2)),'\n')
+
+```
+
+
+## Boosting
+```{r boosting}
+set.seed(99)
+# Inputs, Regression Setting
+fboost <- gbm(lnSalePrice~.,           # regression model
+           data=train,              # data set
+           distribution="gaussian", # boost the squared error, "tdist", 'laplace'
+           n.trees=500,             # Total number of trees/iterations
+           interaction.depth = 1,   #1 means additive, 2 means 2-way interaction, etc
+           shrinkage=0.02           # Shrinkage parameter, weak predictor
+           )
+
+# Returned Values, Returned predictor
+# Making prediction
+cat('RMSE is',sqrt(mean((test$lnSalePrice-predict(fboost,newdata=test,n.trees=500))^2)),'\n')
+```
+
+
+
+
+
+
+#--Simple Regression Stuff--
+```{r}
+# reg <- glm(outcome~.-duration, family="binomial", data=df_train)
+# summary(reg)
+```
+
+# Basic prediction exercise 
+High accuracy but mostly driven by high count of true falses
+```{r}
+# pred_test <- ifelse(predict(reg, df_test, type="response")>0.5,TRUE,FALSE)
+# confusionMatrix(pred_test,df_test$Class)
+```
+
+
+# Simple target top 100
+```{r}
+# pred_test1 <- predict(reg, df_test, type="response")
+# test1_index <- sort(pred_test1, index.return=TRUE, decreasing=TRUE)$ix[1:100]
+# pred_test1tf <- ifelse(pred_test1[test1_index]>0.5,TRUE,FALSE)
+# confusionMatrix(pred_test1tf,df_test$Class[test1_index])
+```
+
+# Can we pick those with greater than 50% odds of responding?
+```{r}
+# pred_test2 <- predict(reg, df_test, type="response")
+# num_true_pred2 <- sum(sort(pred_test2, index.return=TRUE, decreasing=TRUE)$x>0.5)
+# test2_index <- sort(pred_test2, index.return=TRUE, decreasing=TRUE)$ix[1:num_true_pred2]
+# pred_test2tf <- ifelse(pred_test2[test2_index]>0.5,TRUE,FALSE)
+# confusionMatrix(pred_test2tf,df_test$Class[test2_index])
+```
+
+
+
+
+
