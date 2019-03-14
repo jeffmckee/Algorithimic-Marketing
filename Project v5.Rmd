@@ -47,17 +47,6 @@ df$Class <- ifelse(df$ytrue==1,TRUE,FALSE)
 ```
 
 
-# Where to go next for targeting?
-- try kNN clustering on a subset of variables, and do targeting based on clustering vs. discrete response
-- be more precise about which variables we use or don't use for the targeting (e.g. subtracting 1 from campaign)
-- we could take an approach similar to problem set 1 where we analyzed the "lift" from adding these new variables (like the ecom_index from that problem set). in this case, the data is augmented with a couple of columns of "social and economic context attributes" that were not part of the original set
-
-# What other techniques could we explore?
-- the "lift" of making an additional contact (you get more sales in absolute terms, but the conversion percentage goes down [see bar chart above])
-- cost-benefit analysis from contacting people (if we assign costs and benefits to contacting people based on market research)
-- customer segmentation - find similarities between the groups of people that become customers vs. those that don't
-
-
 ```{r}
 df[,ID := .I]
 
@@ -79,17 +68,12 @@ x_matrix <- model.matrix(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5
 ```
 
 ```{r}
+#cv_enet <- cv.glmnet(x=x_matrix, y=model_df$Class, family="binomial")
+best_lambda <- 0.0007920194
 enet <- glmnet(x=x_matrix, y=model_df$Class, family="binomial")
-summary(enet)
+enet_preds <- predict(enet,newx=df_test,s=best_lambda)
 
-test_reg <- glm(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5,data=model_df,family="binomial",control = list(maxit = 50))
-summary(test_reg)
-
-#continue to build out model 
-
-#From final model: Pull out coefficients (this will be input for prediction/targeting)
-test_reg_coef <-coef(test_reg)
-
+# test_reg <- glm(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5,data=model_df,family="binomial",control = list(maxit = 50))
 ```
 
 
