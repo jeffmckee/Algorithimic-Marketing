@@ -44,6 +44,9 @@ df$Class <- ifelse(df$ytrue==1,TRUE,FALSE)
 # table(df$campaign)
 # 
 # barplot(table(df$Class,df$campaign)[2,1:15]/(table(df$Class,df$campaign)[1,1:15]+table(df$Class,df$campaign)[2,1:15]))
+
+summary(df$Class)
+NROW(df$Class[df$Class=='TRUE'])/NROW(df$Class)
 ```
 
 
@@ -88,7 +91,7 @@ enet <- glmnet(x=x_matrix, y=model_df$Class, family="binomial",alpha=0)
 ```
 
 ```{r}
-test_reg   <-glm(Class~(age+jobadmin.+jobbluecollar+jobentrepreneur+jobhousemaid+jobmanagement+jobretired+jobselfemployed+jobservices+jobstudent+jobtechnician+jobunemployed+jobunknown) *( campaign2+campaign3)+campaign4+campaign5,family='binomial',data=model_df)
+test_reg   <-glm(Class~(age+jobadmin.+jobbluecollar+jobentrepreneur+jobhousemaid+jobmanagement+jobretired+jobselfemployed+jobservices+jobstudent+jobtechnician+jobunemployed+jobunknown) *( campaign2+campaign3)+campaign4+campaign5+maritalsingle+maritalunknown+educationbasic.6y+educationbasic.9y+educationhigh.school+educationilliterate+educationprofessional.course+educationuniversity.degree+educationunknown+defaultunknown+defaultyes+housingunknown+housingyes+loanunknown+loanyes,family='binomial',data=model_df)
 summary(test_reg)
 ```
 
