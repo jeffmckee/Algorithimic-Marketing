@@ -122,7 +122,7 @@ summary(test_reg)
         #Cost- Relevant inputs: hourly wage, average call information (separate averages for failures and successes          b/c they have drastically different lengths)
 
 Compute_Sample_Profitability<-function(obs){
-          sample_person <-df_test[505]
+          sample_person <-df_test[obs]
           
     #from regression coefficients + person's info: Simple prediction of success likelihood on the nth call "prob(n)" (conditional on failures for all previous calls)
 
@@ -365,6 +365,7 @@ for (x in 1:nrow(df_test)) {
 
 }
 NROW(df_test[df_test$Class=="TRUE"])
+best_profit
 
 #logit profit
 logit_profit <-0
@@ -409,10 +410,11 @@ for (x in 1:nrow(df_test)) {
 }
 two_call_profit
 three_call_profit
+logit_profit
 lasso_profit
 baseline_profit
 #alt model - make 3 calls to everyone
-barplot(c(baseline_profit,two_call_profit,three_call_profit,lasso_profit))
+barplot(c(baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit))
 
 ```
 
