@@ -353,6 +353,16 @@ for (x in 1:nrow(df_test)) {
 }
 lasso_profit
 
+#compute "theoretical best profit" ->targeting only people who say yes
+best_profit <-0
+for (x in 1:nrow(df_test)) {
+  if(df_test$Class[x]=="TRUE"){  
+      best_profit<-best_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost
+              }
+
+}
+NROW(df_test[df_test$Class=="TRUE"])
+
 #logit profit
 logit_profit <-0
 for (x in 1:nrow(df_test)) {
