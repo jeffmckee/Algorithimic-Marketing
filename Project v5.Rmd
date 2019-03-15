@@ -77,13 +77,6 @@ x_matrix <- model.matrix(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5
 
 #work on testing data
 
-
-df_test[,outcome  :=  ifelse(Class       =="TRUE",1,0)]
-df_test[,campaign2 := ifelse(campaign == 2, 1,0)]
-df_test[,campaign3 := ifelse(campaign == 3, 1,0)]
-df_test[,campaign4 := ifelse(campaign == 4, 1,0)]
-df_test[,campaign5 := ifelse(campaign == 5, 1,0)]
-df_test$campaign[df_test$campaign>5]<-5
 ```
 
 ```{r}
@@ -94,6 +87,10 @@ enet <- glmnet(x=x_matrix, y=model_df$Class, family="binomial",alpha=0)
 
 ```
 
+```{r}
+test_reg   <-glm(Class~(age+jobadmin.+jobbluecollar+jobentrepreneur+jobhousemaid+jobmanagement+jobretired+jobselfemployed+jobservices+jobstudent+jobtechnician+jobunemployed+jobunknown) *( campaign2+campaign3)+campaign4+campaign5,family='binomial',data=model_df)
+summary(test_reg)
+```
 
 ```{r}
 #ASSUMPTIONS:
@@ -122,7 +119,7 @@ enet <- glmnet(x=x_matrix, y=model_df$Class, family="binomial",alpha=0)
         #Cost- Relevant inputs: hourly wage, average call information (separate averages for failures and successes          b/c they have drastically different lengths)
 
 Compute_Sample_Profitability<-function(obs){
-          sample_person <-df_test[obs]
+          sample_person <-df_test[505]
           
     #from regression coefficients + person's info: Simple prediction of success likelihood on the nth call "prob(n)" (conditional on failures for all previous calls)
 
@@ -307,7 +304,7 @@ if(Calls_to_make<=1) {
 
 
 ```{r}
-#Predict decisions (max calls to make) for test dataset
+#Predict decisions (max calls to make) for test dataset using lasso
 
 df_test$Max_calls_lasso<-0
 
@@ -317,6 +314,18 @@ for (x in 1:nrow(df_test)) {
 
 hist(df_test$Max_calls_lasso)
 nrow(df_test[df_test$Max_calls_lasso<df_test$campaign])/nrow(df_test)
+
+```
+```{r}
+#make decision for logit (employment) model
+df_test$Max_calls_logit<-0
+
+suppressWarnings( for (x in 1:nrow(df_test)) {
+  df_test$Max_calls_logit[x] <-Compute_Sample_Profitability(x)
+  }
+)
+hist(df_test$Max_calls_logit)
+nrow(df_test[df_test$Max_calls_logit<df_test$campaign])/nrow(df_test)
 
 ```
 
@@ -343,6 +352,21 @@ for (x in 1:nrow(df_test)) {
 
 }
 lasso_profit
+
+#logit profit
+logit_profit <-0
+for (x in 1:nrow(df_test)) {
+  if  (df_test$campaign[x]>df_test$Max_calls_logit[x]){
+      -df_test$Max_calls_logit[x]*fail_cost 
+      } else {
+                if(df_test$Class[x]=="FALSE"){ 
+                  logit_profit<-logit_profit-df_test$campaign[x]*fail_cost
+                  } else { logit_profit<-logit_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost}
+              }
+
+}
+logit_profit
+
 
 #Gains
 lasso_profit/baseline_profit-1
