@@ -87,11 +87,11 @@ df_test$campaign[df_test$campaign>5]<-5
 ```
 
 ```{r}
-#cv_enet <- cv.glmnet(x=x_matrix, y=model_df$Class, family="binomial")
-best_lambda <- 0.0007920194
-enet <- glmnet(x=x_matrix, y=model_df$Class, family="binomial")
+# cv_enet <- cv.glmnet(x=x_matrix, y=model_df$Class, family="binomial",alpha=0)
+# best_lambda <- cv_enet$lambda.min
+best_lambda <- 0.00673510701979613
+enet <- glmnet(x=x_matrix, y=model_df$Class, family="binomial",alpha=0)
 
-#test_reg <- glm(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5,data=model_df,family="binomial",control = list(maxit = 50))
 ```
 
 
@@ -124,11 +124,7 @@ enet <- glmnet(x=x_matrix, y=model_df$Class, family="binomial")
 Compute_Sample_Profitability<-function(obs){
           sample_person <-df_test[obs]
           
-          
     #from regression coefficients + person's info: Simple prediction of success likelihood on the nth call "prob(n)" (conditional on failures for all previous calls)
-log_prob <- function(logodds){
-  1/(1+exp(-logodds))
-}
 
 #Loops through prediction turning on campaigns to calculate probabilities of success on calls 1:5
 prob <-rep(NA,5)
@@ -313,14 +309,14 @@ if(Calls_to_make<=1) {
 ```{r}
 #Predict decisions (max calls to make) for test dataset
 
-df_test$Max_calls<-0
+df_test$Max_calls_lasso<-0
 
-for (x in 1:1000) {
-  df_test$Max_calls[x] <-Compute_Sample_Profitability_LASSO(x)
+for (x in 1:nrow(df_test)) {
+  df_test$Max_calls_lasso[x] <-Compute_Sample_Profitability_LASSO(x)
   }
 
-hist(df_test$Max_calls)
-nrow(df_test[df_test$Max_calls<df_test$campaign])/nrow(df_test)
+hist(df_test$Max_calls_lasso)
+nrow(df_test[df_test$Max_calls_lasso<df_test$campaign])/nrow(df_test)
 
 ```
 
@@ -333,24 +329,12 @@ for (x in 1:nrow(df_test)) {
   
 }
 baseline_profit
-#compute profit of implementing strategy?
-logit_profit <-0
-for (x in 1:nrow(df_test)) {
-  if  (df_test$campaign[x]>df_test$Max_calls[x]){
-      -df_test$Max_calls[x]*fail_cost 
-      } else {
-                if(df_test$Class[x]=="FALSE"){ 
-                  logit_profit<-logit_profit-df_test$campaign[x]*fail_cost
-                  } else { logit_profit<-logit_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost}
-              }
-
-}
 
 #lasso profit
 lasso_profit <-0
-for (x in 1:1000) {
-  if  (df_test$campaign[x]>df_test$Max_calls[x]){
-      -df_test$Max_calls[x]*fail_cost 
+for (x in 1:nrow(df_test)) {
+  if  (df_test$campaign[x]>df_test$Max_calls_lasso[x]){
+      -df_test$Max_calls_lasso[x]*fail_cost 
       } else {
                 if(df_test$Class[x]=="FALSE"){ 
                   lasso_profit<-lasso_profit-df_test$campaign[x]*fail_cost
@@ -361,7 +345,7 @@ for (x in 1:1000) {
 lasso_profit
 
 #Gains
-logit_profit/baseline_profit-1
+lasso_profit/baseline_profit-1
 
 three_call_profit <-0
 for (x in 1:nrow(df_test)) {
@@ -388,10 +372,10 @@ for (x in 1:nrow(df_test)) {
 }
 two_call_profit
 three_call_profit
-logit_profit
+lasso_profit
 baseline_profit
 #alt model - make 3 calls to everyone
-
+barplot(c(baseline_profit,two_call_profit,three_call_profit,lasso_profit))
 
 ```
 
