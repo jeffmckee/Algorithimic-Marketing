@@ -18,6 +18,7 @@ library(rpart.plot)
 library(randomForest)
 library(xgboost)
 library(gbm)
+library(class)
 
 log_prob <- function(pred){
   1/(1+exp(-pred))
@@ -421,19 +422,15 @@ barplot(c(baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_p
 
 ```{r}
 ### KNN - euclidean approach. when using full_df, there are no predicted conversions
+TrnX <- df_train[,1:30]
+OrigTrnG <- df_train$Class
 
-# campaign dummies; age; retired; student. adjust to match other models
-TrnX <- model_df[1:10000,c(15:18,2,8,11)]
-
-OrigTrnGdf <- model_df[1:10000,1]
-OrigTrnG <- OrigTrnGdf$Class
-
-TstX <- model_df[10001:12000,c(15:18,2,8,11)]
+TstX <- df_test[,1:30]
 
 nnresult <- data.frame("Neighbors" = NULL, "Total_Calls" = NULL, "Good_Calls" = NULL, "Total_Profit" = NULL)
 for (i in 1:20){
   nn <- knn(TrnX, TstX, OrigTrnG, k=i, l = 0, prob=FALSE, use.all = FALSE)
-  nn <- cbind(nn,knn_df[10001:12000,4])
+  nn <- cbind(nn,df_test[,56])
   
   nn$call <- 0
   nn$call[nn$nn==TRUE] <- 1
@@ -451,42 +448,7 @@ for (i in 1:20){
                            "Good_Calls" = length(nn$match[nn$match==TRUE]),
                            "Total_Profit" = sum(nn$profit) - sum(nn$failcost)
                            )
-
-  nnresult <- rbind(nnresult, thisresult)
-}
-nnresult
-
-### KNN - euclidean approach using non-blown-out data
-#age, retired, student
-knn_df <- df[campaign <=5, ]
-knn_df <- knn_df[1:12000,c(1,7,10,56)]
-
-TrnX <- knn_df[1:10000,1:3]
-OrigTrnG <- knn_df[1:10000]$Class
-
-TstX <- knn_df[10001:12000,1:3]
-
-nnresult <- data.frame("Neighbors" = NULL, "Total_Calls" = NULL, "Good_Calls" = NULL, "Total_Profit" = NULL)
-for (i in 1:20){
-  nn <- knn(TrnX, TstX, OrigTrnG, k=i, l = 0, prob=FALSE, use.all = FALSE)
-  nn <- cbind(nn,knn_df[10001:12000,4])
-  
-  nn$call <- 0
-  nn$call[nn$nn==TRUE] <- 1
-  
-  nn$match <- nn$nn == nn$Class & nn$Class== TRUE
-  nn$profit <- 0
-  nn$profit[nn$match==TRUE] <- Success_profit
-  
-  nn$failcall <- nn$nn == TRUE & nn$Class == FALSE
-  nn$failcost <-0
-  nn$failcost[nn$failcall==TRUE] <- fail_cost
-  
-  thisresult <- data.frame("Neighbors" = i ,
-                           "Total_Calls" = sum(nn$call), 
-                           "Good_Calls" = length(nn$match[nn$match==TRUE]),
-                           "Total_Profit" = sum(nn$profit) - sum(nn$failcost)
-                           )
+ 
 
   nnresult <- rbind(nnresult, thisresult)
 }
