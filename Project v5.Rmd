@@ -317,15 +317,13 @@ if(Calls_to_make<=1) {
 df_test$Max_calls_lasso<-0
 
 for (x in 1:nrow(df_test)) {
-    df_test$Max_calls_lasso[x] <-Compute_Sample_Profitability_LASSO(x)
+  df_test$Max_calls_lasso[x] <-Compute_Sample_Profitability_LASSO(x)
   }
 
 hist(df_test$Max_calls_lasso)
 nrow(df_test[df_test$Max_calls_lasso<df_test$campaign])/nrow(df_test)
 
 ```
-
-
 ```{r}
 #make decision for logit (employment) model
 df_test$Max_calls_logit<-0
