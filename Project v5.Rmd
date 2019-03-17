@@ -625,8 +625,8 @@ tree_profit
 ## Random Forest
 ```{r tree all vars, echo=FALSE}
 set.seed(99)
-fit2 <- randomForest(Class~., data=model_df)
-cat('RMSE is ',sqrt(mean((df_test$Class - (predict(fit2, df_test, type="prob")))^2)),'\n')
+fit2 <- randomForest(Class~., data=model_df, type="regression")
+cat('RMSE is ',sqrt(mean((df_test$Class - (predict(fit2, df_test)))^2)),'\n')
 
 ```
 
@@ -636,7 +636,7 @@ cat('RMSE is ',sqrt(mean((df_test$Class - (predict(fit2, df_test, type="prob")))
 
         #Cost- Relevant inputs: hourly wage, average call information (separate averages for failures and successes          b/c they have drastically different lengths)
 
-Compute_Sample_Profitability_Tree<-function(obs){
+Compute_Sample_Profitability_RF<-function(obs){
           sample_person <-df_test[obs]
           
 #Loops through prediction turning on campaigns to calculate probabilities of success on calls 1:5
@@ -645,19 +645,19 @@ prob <-rep(NA,5)
     sample_person$campaign3<-0
     sample_person$campaign4<-0
     sample_person$campaign5<-0
-    tree_test<-sample_person[,c(56,1:30,47:49, 58:61)]
-prob[1] <- predict(fit1,newx=tree_test)[obs]
+    rf_test<-sample_person[,c(56,1:30,47:49, 58:61)]
+prob[1] <- predict(fit2,newx=rf_test)[obs]
     sample_person$campaign2<-1
-prob[2] <- predict(fit1,newx=tree_test)[obs]
+prob[2] <- predict(fit2,newx=rf_test)[obs]
     sample_person$campaign2<-0
     sample_person$campaign3<-1
-prob[3] <- predict(fit1,newx=tree_test)[obs]
+prob[3] <- predict(fit2,newx=rf_test)[obs]
     sample_person$campaign3<-0
     sample_person$campaign4<-1
-prob[4] <- predict(fit1,newx=tree_test)[obs]
+prob[4] <- predict(fit2,newx=rf_test)[obs]
     sample_person$campaign4<-0
     sample_person$campaign5<-1
-prob[5] <- predict(fit1,newx=tree_test)[obs]
+prob[5] <- predict(fit2,newx=rf_test)[obs]
 
 
     #For Calls 1 through N, compute likelihood of success by the nth call: p_sub(n)
@@ -723,32 +723,32 @@ if(Calls_to_make<=1) {
 ```
 
 ```{r}
-df_test$Max_calls_tree<-0
+df_test$Max_calls_rf<-0
 
 for (x in 1:nrow(df_test)) {
-    df_test$Max_calls_tree[x] <-Compute_Sample_Profitability_Tree(x)
+    df_test$Max_calls_rf[x] <-Compute_Sample_Profitability_RF(x)
   }
 
-hist(df_test$Max_calls_tree)
-nrow(df_test[df_test$Max_calls_tree<df_test$campaign])/nrow(df_test)
+hist(df_test$Max_calls_rf)
+nrow(df_test[df_test$Max_calls_rf<df_test$campaign])/nrow(df_test)
 
 ```
 
 ```{r}
 
 #tree profit
-tree_profit <-0
+rf_profit <-0
 for (x in 1:nrow(df_test)) {
-  if  (df_test$campaign[x]>df_test$Max_calls_tree[x]){
-      -df_test$Max_calls_tree[x]*fail_cost 
+  if  (df_test$campaign[x]>df_test$Max_calls_rf[x]){
+      -df_test$Max_calls_rf[x]*fail_cost 
       } else {
                 if(df_test$Class[x]=="FALSE"){ 
-                  tree_profit<-tree_profit-df_test$campaign[x]*fail_cost
-                  } else { tree_profit<-tree_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost}
+                  rf_profit<-rf_profit-df_test$campaign[x]*fail_cost
+                  } else { rf_profit<-rf_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost}
               }
 
 }
-tree_profit
+rf_profit
 
 ```
 
@@ -757,7 +757,7 @@ tree_profit
 ```{r boosting}
 set.seed(99)
 # Inputs, Regression Setting
-fboost <- gbm(lnSalePrice~.,           # regression model
+fboost <- gbm(Class~.,           # regression model
            data=train,              # data set
            distribution="gaussian", # boost the squared error, "tdist", 'laplace'
            n.trees=500,             # Total number of trees/iterations
