@@ -19,6 +19,8 @@ library(randomForest)
 library(xgboost)
 library(gbm)
 library(class)
+library(pvclass)
+library(knnGarden)
 
 log_prob <- function(pred){
   1/(1+exp(-pred))
@@ -78,26 +80,32 @@ full_df[,campaign3 := ifelse(campaign_no == 3, 1,0)]
 full_df[,campaign4 := ifelse(campaign_no == 4, 1,0)]
 full_df[,campaign5 := ifelse(campaign_no == 5, 1,0)]
 model_df<-full_df[campaign_no<=5,c(56,1:30,47:49, 59:62)]
-x_matrix <- model.matrix(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5-1,data=model_df)
-## WNS: I think we can do this more efficiently: 
-x_matrix2 <- model.matrix(Class~.*(campaign2+campaign3+campaign4+campaign5)-campaign2*(campaign3+campaign4+campaign5)-campaign3*(campaign4+campaign5)-campaign4*campaign5-1,data=model_df)
-
-
-#work on testing data
+x_matrix <- model.matrix(Class~.*(campaign2+campaign3+campaign4+campaign5)-campaign2*(campaign3+campaign4+campaign5)-campaign3*(campaign4+campaign5)-campaign4*campaign5-1,data=model_df)
 
 ```
 
 ```{r}
-# cv_enet <- cv.glmnet(x=x_matrix, y=model_df$Class, family="binomial",alpha=0)
-# best_lambda <- cv_enet$lambda.min
-best_lambda <- 0.00673510701979613
-enet <- glmnet(x=x_matrix, y=model_df$Class, family="binomial",alpha=0)
+foldid=sample(1:10,size=length(model_df$Class),replace=TRUE)
+cv_ridge <- cv.glmnet(x=x_matrix, y=model_df$Class, foldid=foldid, lambda = exp(seq(from = -10, to = 0, by = .1)), family="binomial",alpha=0)
+cv_enet <- cv.glmnet(x=x_matrix, y=model_df$Class, foldid=foldid, lambda = exp(seq(from = -10, to = 0, by = .1)), family="binomial",alpha=.5)
+cv_lasso <- cv.glmnet(x=x_matrix, y=model_df$Class, foldid=foldid, lambda = exp(seq(from = -10, to = 0, by = .1)), family="binomial",alpha=1)
 
+save(cv_ridge, file="cv_ridge.rda")
+save(cv_lasso, file="cv_lasso.rda")
+save(cv_enet, file="cv_enet.rda")
+
+# load(file="cv_ridge.rda")
+# load(file="cv_lasso.rda")
+# load(file="cv_enet.rda")
+
+plot(log(cv_lasso$lambda),cv_lasso$cvm,pch=19,col="red",xlab="log(Lambda)",ylab=cv_lasso$name)
+points(log(cv_enet$lambda),cv_enet$cvm,pch=19,col="grey")
+points(log(cv_ridge$lambda),cv_ridge$cvm,pch=19,col="blue")
+legend("topleft",legend=c("alpha= 1","alpha= .5","alpha 0"),pch=19,col=c("red","grey","blue"))
 ```
 
 ```{r}
 test_reg   <-glm(Class~(age+jobadmin.+jobbluecollar+jobentrepreneur+jobhousemaid+jobmanagement+jobretired+jobselfemployed+jobservices+jobstudent+jobtechnician+jobunemployed+jobunknown) *( campaign2+campaign3)+campaign4+campaign5+maritalsingle+maritalunknown+educationbasic.6y+educationbasic.9y+educationhigh.school+educationilliterate+educationprofessional.course+educationuniversity.degree+educationunknown+defaultunknown+defaultyes+housingunknown+housingyes+loanunknown+loanyes,family='binomial',data=model_df)
-summary(test_reg)
 ```
 
 ```{r}
@@ -217,7 +225,7 @@ if(Calls_to_make<=1) {
 
         #Cost- Relevant inputs: hourly wage, average call information (separate averages for failures and successes          b/c they have drastically different lengths)
 
-Compute_Sample_Profitability_LASSO<-function(obs){
+Compute_Sample_Profitability_LASSO<-function(obs,model){
           sample_person <-df_test[obs]
           
 #Loops through prediction turning on campaigns to calculate probabilities of success on calls 1:5
@@ -227,27 +235,27 @@ prob <-rep(NA,5)
     sample_person$campaign4<-0
     sample_person$campaign5<-0
     lasso_test<-sample_person[,c(56,1:30,47:49, 58:61)]
-    test_matrix <- model.matrix(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5-1,data=lasso_test)
-prob[1] <-log_prob(predict(enet,newx=test_matrix,s=best_lambda))
+    test_matrix <- model.matrix(Class~.*(campaign2+campaign3+campaign4+campaign5)-campaign2*(campaign3+campaign4+campaign5)-campaign3*(campaign4+campaign5)-campaign4*campaign5-1,data=lasso_test)
+prob[1] <-log_prob(predict(model,newx=test_matrix,s=model$lambda.min))
     sample_person$campaign2<-1
     lasso_test<-sample_person[,c(56,1:30,47:49, 58:61)]
-    test_matrix <- model.matrix(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5-1,data=lasso_test)
-prob[2] <-log_prob(predict(enet,newx=test_matrix,s=best_lambda))
+    test_matrix <- model.matrix(Class~.*(campaign2+campaign3+campaign4+campaign5)-campaign2*(campaign3+campaign4+campaign5)-campaign3*(campaign4+campaign5)-campaign4*campaign5-1,data=lasso_test)
+prob[2] <-log_prob(predict(model,newx=test_matrix,s=model$lambda.min))
     sample_person$campaign2<-0
     sample_person$campaign3<-1
     lasso_test<-sample_person[,c(56,1:30,47:49, 58:61)]
-    test_matrix <- model.matrix(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5-1,data=lasso_test)
-prob[3] <-log_prob(predict(enet,newx=test_matrix,s=best_lambda))
+    test_matrix <- model.matrix(Class~.*(campaign2+campaign3+campaign4+campaign5)-campaign2*(campaign3+campaign4+campaign5)-campaign3*(campaign4+campaign5)-campaign4*campaign5-1,data=lasso_test)
+prob[3] <-log_prob(predict(model,newx=test_matrix,s=model$lambda.min))
     sample_person$campaign3<-0
     sample_person$campaign4<-1
     lasso_test<-sample_person[,c(56,1:30,47:49, 58:61)]
-    test_matrix <- model.matrix(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5-1,data=lasso_test)
-prob[4] <-log_prob(predict(enet,newx=test_matrix,s=best_lambda))
+    test_matrix <- model.matrix(Class~.*(campaign2+campaign3+campaign4+campaign5)-campaign2*(campaign3+campaign4+campaign5)-campaign3*(campaign4+campaign5)-campaign4*campaign5-1,data=lasso_test)
+prob[4] <-log_prob(predict(model,newx=test_matrix,s=model$lambda.min))
     sample_person$campaign4<-0
     sample_person$campaign5<-1
     lasso_test<-sample_person[,c(56,1:30,47:49, 58:61)]
-    test_matrix <- model.matrix(Class~.+.*campaign2+.*campaign3+.*campaign4+.*campaign5-1,data=lasso_test)
-prob[5] <-log_prob(predict(enet,newx=test_matrix,s=best_lambda))
+    test_matrix <- model.matrix(Class~.*(campaign2+campaign3+campaign4+campaign5)-campaign2*(campaign3+campaign4+campaign5)-campaign3*(campaign4+campaign5)-campaign4*campaign5-1,data=lasso_test)
+prob[5] <-log_prob(predict(model,newx=test_matrix,s=model$lambda.min))
 
 
     #For Calls 1 through N, compute likelihood of success by the nth call: p_sub(n)
@@ -317,7 +325,7 @@ if(Calls_to_make<=1) {
 df_test$Max_calls_lasso<-0
 
 for (x in 1:nrow(df_test)) {
-  df_test$Max_calls_lasso[x] <-Compute_Sample_Profitability_LASSO(x)
+  df_test$Max_calls_lasso[x] <-Compute_Sample_Profitability_LASSO(x, cv_ridge)
   }
 
 hist(df_test$Max_calls_lasso)
@@ -419,7 +427,8 @@ logit_profit
 lasso_profit
 baseline_profit
 #alt model - make 3 calls to everyone
-barplot(c(baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit))
+barplot(c(baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit), names = c("baseline","two-call","three-call","logit","elastic net logic"),ylim=c(0,12000))
+#text(x=1:5,y=c(baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit)+300,labels = c(baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit))
 
 ```
 
@@ -461,11 +470,9 @@ nnresult
 ### KNN with Mahalanobis distances: computationally taxing; cannot compute enough to compare against model
 ## first Mahalanobis approach: knnGarden package
 #install.packages("knnGarden")
-library(knnGarden)
 knnMCN(TrnX=TrnX[1:1000,],OrigTrnG=OrigTrnG[1:1000],TstX=TstX[1:200,],ShowObs=FALSE,K=1)
 
 ## second Mahalanobis approach: pvclass package. computationally taxing; subsetted to 1000 rows in dev 
-library(pvclass)
 knnout <- cvpvs.knn(TrnX[1:1000], OrigTrnG[1:1000], k = 1, distance = 'mahalanobis', cova = 'standard')
 ```
 
