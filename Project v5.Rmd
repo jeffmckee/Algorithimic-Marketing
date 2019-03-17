@@ -494,40 +494,44 @@ OrigTrnG <- df_train$Class
 
 TstX <- df_test[,1:30]
 
-nnresult <- data.frame("Neighbors" = NULL, "Total_Calls" = NULL, "Good_Calls" = NULL, "Total_Profit" = NULL)
-for (i in 1:20){
-  nn <- knn(TrnX, TstX, OrigTrnG, k=i, l = 0, prob=FALSE, use.all = FALSE)
-  nn <- cbind(nn,df_test[,56])
-  
-  nn$call <- 0
-  nn$call[nn$nn==TRUE] <- 1
-  
-  nn$match <- nn$nn == nn$Class & nn$Class== TRUE
-  nn$profit <- 0
-  nn$profit[nn$match==TRUE] <- Success_profit
-  
-  nn$failcall <- nn$nn == TRUE & nn$Class == FALSE
-  nn$failcost <-0
-  nn$failcost[nn$failcall==TRUE] <- fail_cost
-  
-  thisresult <- data.frame("Neighbors" = i ,
-                           "Total_Calls" = sum(nn$call), 
-                           "Good_Calls" = length(nn$match[nn$match==TRUE]),
-                           "Total_Profit" = sum(nn$profit) - sum(nn$failcost)
-                           )
- 
-
-  nnresult <- rbind(nnresult, thisresult)
-}
+# nnresult <- data.frame("Neighbors" = NULL, "Total_Calls" = NULL, "Good_Calls" = NULL, "Total_Profit" = NULL)
+# for (i in 1:20){
+#   nn <- knn(TrnX, TstX, OrigTrnG, k=i, l = 0, prob=FALSE, use.all = FALSE)
+#   nn <- cbind(nn,df_test[,56])
+# 
+#   nn$call <- 0
+#   nn$call[nn$nn==TRUE] <- 1
+# 
+#   nn$match <- nn$nn == nn$Class & nn$Class== TRUE
+#   nn$profit <- 0
+#   nn$profit[nn$match==TRUE] <- Success_profit
+# 
+#   nn$failcall <- nn$nn == TRUE & nn$Class == FALSE
+#   nn$failcost <-0
+#   nn$failcost[nn$failcall==TRUE] <- fail_cost
+# 
+#   thisresult <- data.frame("Neighbors" = i ,
+#                            "Total_Calls" = sum(nn$call),
+#                            "Good_Calls" = length(nn$match[nn$match==TRUE]),
+#                            "Total_Profit" = sum(nn$profit) - sum(nn$failcost)
+#                            )
+# 
+# 
+#   nnresult <- rbind(nnresult, thisresult)
+# }
+# save(nnresult, file="nnresult.rda")
+load(file="nnresult.rda")
+write.csv(nnresult, "knn_result.csv")
 nnresult
+
 
 ### KNN with Mahalanobis distances: computationally taxing; cannot compute enough to compare against model
 ## first Mahalanobis approach: knnGarden package
 #install.packages("knnGarden")
-knnMCN(TrnX=TrnX[1:1000,],OrigTrnG=OrigTrnG[1:1000],TstX=TstX[1:200,],ShowObs=FALSE,K=1)
+#knnMCN(TrnX=TrnX[1:1000,],OrigTrnG=OrigTrnG[1:1000],TstX=TstX[1:200,],ShowObs=FALSE,K=1)
 
 ## second Mahalanobis approach: pvclass package. computationally taxing; subsetted to 1000 rows in dev 
-knnout <- cvpvs.knn(TrnX[1:1000], OrigTrnG[1:1000], k = 1, distance = 'mahalanobis', cova = 'standard')
+#knnout <- cvpvs.knn(TrnX[1:1000], OrigTrnG[1:1000], k = 1, distance = 'mahalanobis', cova = 'standard')
 ```
 
 
