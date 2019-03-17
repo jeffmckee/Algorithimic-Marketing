@@ -64,13 +64,12 @@ train_ind <- sample(seq_len(nrow(df)), size = training_size)
 df_train <- df[train_ind, ]
 
 df_test <- df[-train_ind, ]
+df_test[df_test$campaign>5,'Class']<-FALSE
+df_test$campaign[df_test$campaign>5]<-5
 df_test[,campaign2 := ifelse(campaign == 2, 1,0)]
 df_test[,campaign3 := ifelse(campaign == 3, 1,0)]
 df_test[,campaign4 := ifelse(campaign == 4, 1,0)]
 df_test[,campaign5 := ifelse(campaign == 5, 1,0)]
-## WNS: I didn't touch the following line but if the intent is to collapse all campaigns greater than 5 into a 5 call campaign, shouldn't it be before line 68?
-df_test$campaign[df_test$campaign>5]<-5
-
 
 # Work on training data
 full_df <- df_train[rep(1:.N,campaign)][,campaign_no:=1:.N,by=ID]
