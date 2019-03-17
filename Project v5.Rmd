@@ -85,18 +85,18 @@ x_matrix <- model.matrix(Class~.*(campaign2+campaign3+campaign4+campaign5)-campa
 ```
 
 ```{r}
-foldid=sample(1:10,size=length(model_df$Class),replace=TRUE)
-cv_ridge <- cv.glmnet(x=x_matrix, y=model_df$Class, foldid=foldid, lambda = exp(seq(from = -10, to = 0, by = .1)), family="binomial",alpha=0)
-cv_enet <- cv.glmnet(x=x_matrix, y=model_df$Class, foldid=foldid, lambda = exp(seq(from = -10, to = 0, by = .1)), family="binomial",alpha=.5)
-cv_lasso <- cv.glmnet(x=x_matrix, y=model_df$Class, foldid=foldid, lambda = exp(seq(from = -10, to = 0, by = .1)), family="binomial",alpha=1)
+# foldid=sample(1:10,size=length(model_df$Class),replace=TRUE)
+# cv_ridge <- cv.glmnet(x=x_matrix, y=model_df$Class, foldid=foldid, lambda = exp(seq(from = -10, to = 0, by = .1)), family="binomial",alpha=0)
+# cv_enet <- cv.glmnet(x=x_matrix, y=model_df$Class, foldid=foldid, lambda = exp(seq(from = -10, to = 0, by = .1)), family="binomial",alpha=.5)
+# cv_lasso <- cv.glmnet(x=x_matrix, y=model_df$Class, foldid=foldid, lambda = exp(seq(from = -10, to = 0, by = .1)), family="binomial",alpha=1)
+# 
+# save(cv_ridge, file="cv_ridge.rda")
+# save(cv_lasso, file="cv_lasso.rda")
+# save(cv_enet, file="cv_enet.rda")
 
-save(cv_ridge, file="cv_ridge.rda")
-save(cv_lasso, file="cv_lasso.rda")
-save(cv_enet, file="cv_enet.rda")
-
-# load(file="cv_ridge.rda")
-# load(file="cv_lasso.rda")
-# load(file="cv_enet.rda")
+load(file="cv_ridge.rda")
+load(file="cv_lasso.rda")
+load(file="cv_enet.rda")
 
 plot(log(cv_lasso$lambda),cv_lasso$cvm,pch=19,col="red",xlab="log(Lambda)",ylab=cv_lasso$name)
 points(log(cv_enet$lambda),cv_enet$cvm,pch=19,col="grey")
@@ -105,7 +105,7 @@ legend("topleft",legend=c("alpha= 1","alpha= .5","alpha 0"),pch=19,col=c("red","
 ```
 
 ```{r}
-test_reg   <-glm(Class~(age+jobadmin.+jobbluecollar+jobentrepreneur+jobhousemaid+jobmanagement+jobretired+jobselfemployed+jobservices+jobstudent+jobtechnician+jobunemployed+jobunknown) *( campaign2+campaign3)+campaign4+campaign5+maritalsingle+maritalunknown+educationbasic.6y+educationbasic.9y+educationhigh.school+educationilliterate+educationprofessional.course+educationuniversity.degree+educationunknown+defaultunknown+defaultyes+housingunknown+housingyes+loanunknown+loanyes,family='binomial',data=model_df)
+# test_reg   <-glm(Class~(age+jobadmin.+jobbluecollar+jobentrepreneur+jobhousemaid+jobmanagement+jobretired+jobselfemployed+jobservices+jobstudent+jobtechnician+jobunemployed+jobunknown) *( campaign2+campaign3)+campaign4+campaign5+maritalsingle+maritalunknown+educationbasic.6y+educationbasic.9y+educationhigh.school+educationilliterate+educationprofessional.course+educationuniversity.degree+educationunknown+defaultunknown+defaultyes+housingunknown+housingyes+loanunknown+loanyes,family='binomial',data=model_df)
 ```
 
 ```{r}
@@ -320,29 +320,62 @@ if(Calls_to_make<=1) {
 
 
 ```{r}
-#Predict decisions (max calls to make) for test dataset using lasso
-
-df_test$Max_calls_lasso<-0
-
-for (x in 1:nrow(df_test)) {
-  df_test$Max_calls_lasso[x] <-Compute_Sample_Profitability_LASSO(x, cv_ridge)
-  }
-
-hist(df_test$Max_calls_lasso)
-nrow(df_test[df_test$Max_calls_lasso<df_test$campaign])/nrow(df_test)
+# #Predict decisions (max calls to make) for test dataset using lasso
+# 
+# df_test$Max_calls_ridge<-0
+# 
+# for (x in 1:nrow(df_test)) {
+#   df_test$Max_calls_ridge[x] <-Compute_Sample_Profitability_LASSO(x, cv_ridge)
+#   }
+# 
+# hist(df_test$Max_calls_ridge)
+# nrow(df_test[df_test$Max_calls_ridge<df_test$campaign])/nrow(df_test)
 
 ```
 ```{r}
-#make decision for logit (employment) model
-df_test$Max_calls_logit<-0
+# #Predict decisions (max calls to make) for test dataset using lasso
+# 
+# df_test$Max_calls_enet<-0
+# 
+# for (x in 1:nrow(df_test)) {
+#   df_test$Max_calls_enet[x] <-Compute_Sample_Profitability_LASSO(x, cv_enet)
+#   }
+# 
+# hist(df_test$Max_calls_enet)
+# nrow(df_test[df_test$Max_calls_enet<df_test$campaign])/nrow(df_test)
 
-suppressWarnings( for (x in 1:nrow(df_test)) {
-  df_test$Max_calls_logit[x] <-Compute_Sample_Profitability(x)
-  }
-)
-hist(df_test$Max_calls_logit)
-nrow(df_test[df_test$Max_calls_logit<df_test$campaign])/nrow(df_test)
+```
 
+```{r}
+# #Predict decisions (max calls to make) for test dataset using lasso
+# 
+# df_test$Max_calls_lasso<-0
+# 
+# for (x in 1:nrow(df_test)) {
+#   df_test$Max_calls_lasso[x] <-Compute_Sample_Profitability_LASSO(x, cv_lasso)
+#   }
+# 
+# hist(df_test$Max_calls_lasso)
+# nrow(df_test[df_test$Max_calls_lasso<df_test$campaign])/nrow(df_test)
+
+```
+
+```{r}
+# #make decision for logit (employment) model
+# df_test$Max_calls_logit<-0
+# 
+# suppressWarnings( for (x in 1:nrow(df_test)) {
+#   df_test$Max_calls_logit[x] <-Compute_Sample_Profitability(x)
+#   }
+# )
+# hist(df_test$Max_calls_logit)
+# nrow(df_test[df_test$Max_calls_logit<df_test$campaign])/nrow(df_test)
+
+```
+```{r}
+# save(df_test,file='df_test.rda')
+
+load(file='df_test.rda')
 ```
 
 ```{r}
@@ -355,7 +388,33 @@ for (x in 1:nrow(df_test)) {
 }
 baseline_profit
 
-#lasso profit
+#ridge profit
+ridge_profit <-0
+for (x in 1:nrow(df_test)) {
+  if  (df_test$campaign[x]>df_test$Max_calls_ridge[x]){
+      -df_test$Max_calls_ridge[x]*fail_cost 
+      } else {
+                if(df_test$Class[x]=="FALSE"){ 
+                  ridge_profit<-ridge_profit-df_test$campaign[x]*fail_cost
+                  } else { ridge_profit<-ridge_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost}
+              }
+
+}
+ridge_profit
+
+enet_profit <-0
+for (x in 1:nrow(df_test)) {
+  if  (df_test$campaign[x]>df_test$Max_calls_enet[x]){
+      -df_test$Max_calls_enet[x]*fail_cost 
+      } else {
+                if(df_test$Class[x]=="FALSE"){ 
+                  enet_profit<-enet_profit-df_test$campaign[x]*fail_cost
+                  } else { enet_profit<-enet_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost}
+              }
+
+}
+enet_profit
+
 lasso_profit <-0
 for (x in 1:nrow(df_test)) {
   if  (df_test$campaign[x]>df_test$Max_calls_lasso[x]){
@@ -421,13 +480,8 @@ for (x in 1:nrow(df_test)) {
               }
 
 }
-two_call_profit
-three_call_profit
-logit_profit
-lasso_profit
-baseline_profit
-#alt model - make 3 calls to everyone
-barplot(c(baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit), names = c("baseline","two-call","three-call","logit","elastic net logic"),ylim=c(0,12000))
+
+barplot(c(baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit, enet_profit,ridge_profit), names = c("baseline","two-call","three-call","logit","lasso","enet","ridge"),ylim=c(0,12000))
 #text(x=1:5,y=c(baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit)+300,labels = c(baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit))
 
 ```
