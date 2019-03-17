@@ -482,12 +482,12 @@ knnout <- cvpvs.knn(TrnX[1:1000], OrigTrnG[1:1000], k = 1, distance = 'mahalanob
 ## Regression Tree
 ```{r}
 set.seed(99)
-fit1 = rpart(lnSalePrice~., data=train, control=rpart.control(minsplit=5, cp=0.0001, xval=10))
+fit1 = rpart(Class~., data=model_df, control=rpart.control(minsplit=5, cp=0.0001, xval=10))
 
 nbig = length(unique(fit1$where))
 cat('Size of big tree: ',nbig,'\n')
 
-cat('RMSE=',sqrt(mean((test$lnSalePrice-predict(fit1,test))^2)),'\n')
+cat('RMSE=',sqrt(mean((df_test$Class-predict(fit1,df_test))^2)),'\n')
 
 (cptable = printcp(fit1))
 (bestcp = cptable[ which.min(cptable[,"xerror"]), "CP" ])   
@@ -495,15 +495,260 @@ fit1B = prune(fit1,cp=bestcp)
 nbigB = length(unique(fit1B$where))
 cat('Size of pruned tree: ',nbigB,'\n')
 
-cat('RMSE=',sqrt(mean((test$lnSalePrice-predict(fit1B,test))^2)),'\n')
+cat('RMSE=',sqrt(mean((df_test$Class-predict(fit1B,df_test))^2)),'\n')
 ```
+
+```{r}
+#Generate estimates of cost per call, benefit (revenue/profit) of time deposit product for bank
+
+        #Cost- Relevant inputs: hourly wage, average call information (separate averages for failures and successes          b/c they have drastically different lengths)
+
+Compute_Sample_Profitability_Tree<-function(obs){
+          sample_person <-df_test[obs]
+          
+#Loops through prediction turning on campaigns to calculate probabilities of success on calls 1:5
+prob <-rep(NA,5)
+    sample_person$campaign2<-0
+    sample_person$campaign3<-0
+    sample_person$campaign4<-0
+    sample_person$campaign5<-0
+    tree_test<-sample_person[,c(56,1:30,47:49, 58:61)]
+prob[1] <- predict(fit1,newx=tree_test)[obs]
+    sample_person$campaign2<-1
+prob[2] <- predict(fit1,newx=tree_test)[obs]
+    sample_person$campaign2<-0
+    sample_person$campaign3<-1
+prob[3] <- predict(fit1,newx=tree_test)[obs]
+    sample_person$campaign3<-0
+    sample_person$campaign4<-1
+prob[4] <- predict(fit1,newx=tree_test)[obs]
+    sample_person$campaign4<-0
+    sample_person$campaign5<-1
+prob[5] <- predict(fit1,newx=tree_test)[obs]
+
+
+    #For Calls 1 through N, compute likelihood of success by the nth call: p_sub(n)
+        
+p_sub<-rep(NA,5)
+  p_sub[1]<-prob[1]
+  for (i in 2:5) {
+    p_sub[i] <-p_sub[i-1]+prob[i]*(1-p_sub[i-1])
+  }
+
+  
+  #For calls 1 through N, compute lift of call n: lift(n)= p_sub(n) - p_sub(n-1) (this represents unconditional probability of success on call n)
+lift<-rep(NA,5)
+  lift[1]<-p_sub[1]
+  for (i in 2:5) {
+    lift[i] <-p_sub[i]-p_sub[i-1]
+  }
+  
+#Compute number of calls to target for a given customer (N.B.: As long as probability of success is declining monotonically, as soon as the nth call is not profitable, the (n+1)th call will also not be profitable.) 
+  #Test: Identify whether the nth call (if made) would be profitable. THis is simple:
+   #Profit(n|All calls prior="no")=[Profit of Success]*p_sub(n) -[Cost of Failure]*(1-p_sub(n)) 
+  Profit <- rep(NA,5)
+  for (i in 1:5){
+    Profit[i] <- Success_profit*prob[i]-fail_cost*(1-prob[i])
+  }
+  #Decision: for the first unprofitable call "A," choose  A-1 as the target number of calls.
+  Calls_to_make<-0
+  Calls_to_make <-NROW(Profit[Profit>0])
+  #based out this decision (target customer with A-1 calls), also compute 
+    #(1) the expected number of calls with that rule(this is not simply A-1 b/c customer may sign up earlier), and
+Expected_calls <- 0
+if(Calls_to_make<=1) {
+  Expected_calls<-Calls_to_make
+}  else {
+    for (i in 1:(Calls_to_make-1)){
+      Expected_calls<-Expected_calls+i*lift[i]
+    }
+    Expected_calls<-Expected_calls+Calls_to_make*(1-p_sub[Calls_to_make-1])
+  }
+
+    #(2) the expected profit from this strategy (weighted average of profitabilities forscenarios given this targeting plan, weighting each scenario by lift(n) and then adding together)
+  
+  
+  Expected_profit <- 0
+  if (Calls_to_make>0){
+    for (i in 1:Calls_to_make){
+      Expected_profit <-Expected_profit+lift[i]*(Success_profit-fail_cost*(i-1))
+    }
+    Expected_profit <-Expected_profit-fail_cost*Calls_to_make*(1-p_sub[Calls_to_make])
+  } 
+
+  Metrics <-c("Euribor","Max Calls","Expected Calls", "Profit")
+  values<-c(Market_rate,Calls_to_make,Expected_calls,Expected_profit)
+  results <-data.frame(Metrics,values)
+#  print(results)
+  
+  return(Calls_to_make)
+
+}
+
+
+
+```
+
+```{r}
+df_test$Max_calls_tree<-0
+
+for (x in 1:nrow(df_test)) {
+    df_test$Max_calls_tree[x] <-Compute_Sample_Profitability_Tree(x)
+  }
+
+hist(df_test$Max_calls_tree)
+nrow(df_test[df_test$Max_calls_tree<df_test$campaign])/nrow(df_test)
+
+```
+
+```{r}
+
+#tree profit
+tree_profit <-0
+for (x in 1:nrow(df_test)) {
+  if  (df_test$campaign[x]>df_test$Max_calls_tree[x]){
+      -df_test$Max_calls_tree[x]*fail_cost 
+      } else {
+                if(df_test$Class[x]=="FALSE"){ 
+                  tree_profit<-tree_profit-df_test$campaign[x]*fail_cost
+                  } else { tree_profit<-tree_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost}
+              }
+
+}
+tree_profit
+
+```
+
+
 
 
 ## Random Forest
 ```{r tree all vars, echo=FALSE}
 set.seed(99)
-fit2 <- randomForest(lnSalePrice~., data=train, ntree=400)
-cat('RMSE is ',sqrt(mean((test$lnSalePrice - (predict(fit2, test)))^2)),'\n')
+fit2 <- randomForest(Class~., data=model_df)
+cat('RMSE is ',sqrt(mean((df_test$Class - (predict(fit2, df_test, type="prob")))^2)),'\n')
+
+```
+
+
+```{r}
+#Generate estimates of cost per call, benefit (revenue/profit) of time deposit product for bank
+
+        #Cost- Relevant inputs: hourly wage, average call information (separate averages for failures and successes          b/c they have drastically different lengths)
+
+Compute_Sample_Profitability_Tree<-function(obs){
+          sample_person <-df_test[obs]
+          
+#Loops through prediction turning on campaigns to calculate probabilities of success on calls 1:5
+prob <-rep(NA,5)
+    sample_person$campaign2<-0
+    sample_person$campaign3<-0
+    sample_person$campaign4<-0
+    sample_person$campaign5<-0
+    tree_test<-sample_person[,c(56,1:30,47:49, 58:61)]
+prob[1] <- predict(fit1,newx=tree_test)[obs]
+    sample_person$campaign2<-1
+prob[2] <- predict(fit1,newx=tree_test)[obs]
+    sample_person$campaign2<-0
+    sample_person$campaign3<-1
+prob[3] <- predict(fit1,newx=tree_test)[obs]
+    sample_person$campaign3<-0
+    sample_person$campaign4<-1
+prob[4] <- predict(fit1,newx=tree_test)[obs]
+    sample_person$campaign4<-0
+    sample_person$campaign5<-1
+prob[5] <- predict(fit1,newx=tree_test)[obs]
+
+
+    #For Calls 1 through N, compute likelihood of success by the nth call: p_sub(n)
+        
+p_sub<-rep(NA,5)
+  p_sub[1]<-prob[1]
+  for (i in 2:5) {
+    p_sub[i] <-p_sub[i-1]+prob[i]*(1-p_sub[i-1])
+  }
+
+  
+  #For calls 1 through N, compute lift of call n: lift(n)= p_sub(n) - p_sub(n-1) (this represents unconditional probability of success on call n)
+lift<-rep(NA,5)
+  lift[1]<-p_sub[1]
+  for (i in 2:5) {
+    lift[i] <-p_sub[i]-p_sub[i-1]
+  }
+  
+#Compute number of calls to target for a given customer (N.B.: As long as probability of success is declining monotonically, as soon as the nth call is not profitable, the (n+1)th call will also not be profitable.) 
+  #Test: Identify whether the nth call (if made) would be profitable. THis is simple:
+   #Profit(n|All calls prior="no")=[Profit of Success]*p_sub(n) -[Cost of Failure]*(1-p_sub(n)) 
+  Profit <- rep(NA,5)
+  for (i in 1:5){
+    Profit[i] <- Success_profit*prob[i]-fail_cost*(1-prob[i])
+  }
+  #Decision: for the first unprofitable call "A," choose  A-1 as the target number of calls.
+  Calls_to_make<-0
+  Calls_to_make <-NROW(Profit[Profit>0])
+  #based out this decision (target customer with A-1 calls), also compute 
+    #(1) the expected number of calls with that rule(this is not simply A-1 b/c customer may sign up earlier), and
+Expected_calls <- 0
+if(Calls_to_make<=1) {
+  Expected_calls<-Calls_to_make
+}  else {
+    for (i in 1:(Calls_to_make-1)){
+      Expected_calls<-Expected_calls+i*lift[i]
+    }
+    Expected_calls<-Expected_calls+Calls_to_make*(1-p_sub[Calls_to_make-1])
+  }
+
+    #(2) the expected profit from this strategy (weighted average of profitabilities forscenarios given this targeting plan, weighting each scenario by lift(n) and then adding together)
+  
+  
+  Expected_profit <- 0
+  if (Calls_to_make>0){
+    for (i in 1:Calls_to_make){
+      Expected_profit <-Expected_profit+lift[i]*(Success_profit-fail_cost*(i-1))
+    }
+    Expected_profit <-Expected_profit-fail_cost*Calls_to_make*(1-p_sub[Calls_to_make])
+  } 
+
+  Metrics <-c("Euribor","Max Calls","Expected Calls", "Profit")
+  values<-c(Market_rate,Calls_to_make,Expected_calls,Expected_profit)
+  results <-data.frame(Metrics,values)
+#  print(results)
+  
+  return(Calls_to_make)
+
+}
+
+
+
+```
+
+```{r}
+df_test$Max_calls_tree<-0
+
+for (x in 1:nrow(df_test)) {
+    df_test$Max_calls_tree[x] <-Compute_Sample_Profitability_Tree(x)
+  }
+
+hist(df_test$Max_calls_tree)
+nrow(df_test[df_test$Max_calls_tree<df_test$campaign])/nrow(df_test)
+
+```
+
+```{r}
+
+#tree profit
+tree_profit <-0
+for (x in 1:nrow(df_test)) {
+  if  (df_test$campaign[x]>df_test$Max_calls_tree[x]){
+      -df_test$Max_calls_tree[x]*fail_cost 
+      } else {
+                if(df_test$Class[x]=="FALSE"){ 
+                  tree_profit<-tree_profit-df_test$campaign[x]*fail_cost
+                  } else { tree_profit<-tree_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost}
+              }
+
+}
+tree_profit
 
 ```
 
