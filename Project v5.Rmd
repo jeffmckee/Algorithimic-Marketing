@@ -392,7 +392,7 @@ baseline_profit
 ridge_profit <-0
 for (x in 1:nrow(df_test)) {
   if  (df_test$campaign[x]>df_test$Max_calls_ridge[x]){
-      -df_test$Max_calls_ridge[x]*fail_cost 
+       ridge_profit<-ridge_profit-df_test$Max_calls_ridge[x]*fail_cost 
       } else {
                 if(df_test$Class[x]=="FALSE"){ 
                   ridge_profit<-ridge_profit-df_test$campaign[x]*fail_cost
@@ -405,7 +405,7 @@ ridge_profit
 enet_profit <-0
 for (x in 1:nrow(df_test)) {
   if  (df_test$campaign[x]>df_test$Max_calls_enet[x]){
-      -df_test$Max_calls_enet[x]*fail_cost 
+      enet_profit<-enet_profit-df_test$Max_calls_enet[x]*fail_cost 
       } else {
                 if(df_test$Class[x]=="FALSE"){ 
                   enet_profit<-enet_profit-df_test$campaign[x]*fail_cost
@@ -418,7 +418,7 @@ enet_profit
 lasso_profit <-0
 for (x in 1:nrow(df_test)) {
   if  (df_test$campaign[x]>df_test$Max_calls_lasso[x]){
-      -df_test$Max_calls_lasso[x]*fail_cost 
+      lasso_profit<-lasso_profit-df_test$Max_calls_lasso[x]*fail_cost 
       } else {
                 if(df_test$Class[x]=="FALSE"){ 
                   lasso_profit<-lasso_profit-df_test$campaign[x]*fail_cost
@@ -443,7 +443,7 @@ best_profit
 logit_profit <-0
 for (x in 1:nrow(df_test)) {
   if  (df_test$campaign[x]>df_test$Max_calls_logit[x]){
-      -df_test$Max_calls_logit[x]*fail_cost 
+      logit_profit<-logit_profit-df_test$Max_calls_logit[x]*fail_cost 
       } else {
                 if(df_test$Class[x]=="FALSE"){ 
                   logit_profit<-logit_profit-df_test$campaign[x]*fail_cost
@@ -460,7 +460,7 @@ lasso_profit/baseline_profit-1
 three_call_profit <-0
 for (x in 1:nrow(df_test)) {
   if  (df_test$campaign[x]>3){
-      -3*fail_cost 
+      three_call_profit<-three_call_profit-3*fail_cost 
       } else {
                 if(df_test$Class[x]=="FALSE"){ 
                   three_call_profit<-three_call_profit-df_test$campaign[x]*fail_cost
@@ -472,7 +472,7 @@ for (x in 1:nrow(df_test)) {
 two_call_profit <-0
 for (x in 1:nrow(df_test)) {
   if  (df_test$campaign[x]>2){
-      -2*fail_cost 
+      two_call_profit<-two_call_profit-2*fail_cost 
       } else {
                 if(df_test$Class[x]=="FALSE"){ 
                   two_call_profit<-two_call_profit-df_test$campaign[x]*fail_cost
