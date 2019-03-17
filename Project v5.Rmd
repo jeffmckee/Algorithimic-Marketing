@@ -531,6 +531,11 @@ knnout <- cvpvs.knn(TrnX[1:1000], OrigTrnG[1:1000], k = 1, distance = 'mahalanob
 
 
 
+## Warren's Todo
+
+* update trees to predict probabilities
+* update prediction algorithm to evaluate profit with matrix vs. individual
+
 
 ## Regression Tree
 ```{r}
@@ -751,6 +756,8 @@ if(Calls_to_make<=1) {
     Expected_calls<-Expected_calls+Calls_to_make*(1-p_sub[Calls_to_make-1])
   }
 
+
+
     #(2) the expected profit from this strategy (weighted average of profitabilities forscenarios given this targeting plan, weighting each scenario by lift(n) and then adding together)
   
   
@@ -825,32 +832,36 @@ cat('RMSE is',sqrt(mean((df_test$Class-log_prob(predict(fboost,newdata=df_test,n
 
 
 ```{r}
+
+
+df_test$Max_calls_gbm<-0
+
+
 #Generate estimates of cost per call, benefit (revenue/profit) of time deposit product for bank
 
         #Cost- Relevant inputs: hourly wage, average call information (separate averages for failures and successes          b/c they have drastically different lengths)
 
-Compute_Sample_Profitability_GBM<-function(obs){
-          sample_person <-df_test[obs]
+gbm_test <-df_test[,c(56,1:30,47:49, 58:61)]
           
 #Loops through prediction turning on campaigns to calculate probabilities of success on calls 1:5
 prob <-rep(NA,5)
-    sample_person$campaign2<-0
-    sample_person$campaign3<-0
-    sample_person$campaign4<-0
-    sample_person$campaign5<-0
-    gbm_test<-sample_person[,c(56,1:30,47:49, 58:61)]
-prob[1] <- log_prob(predict(fboost,newx=gbm_test, n.trees=500))[obs]
-    sample_person$campaign2<-1
-prob[2] <- log_prob(predict(fboost,newx=gbm_test, n.trees=500))[obs]
-    sample_person$campaign2<-0
-    sample_person$campaign3<-1
-prob[3] <- log_prob(predict(fboost,newx=gbm_test, n.trees=500))[obs]
-    sample_person$campaign3<-0
-    sample_person$campaign4<-1
-prob[4] <- log_prob(predict(fboost,newx=gbm_test, n.trees=500))[obs]
-    sample_person$campaign4<-0
-    sample_person$campaign5<-1
-prob[5] <- log_prob(predict(fboost,newx=gbm_test, n.trees=500))[obs]
+    gbm_test$campaign2<-0
+    gbm_test$campaign3<-0
+    gbm_test$campaign4<-0
+    gbm_test$campaign5<-0
+
+prob[1] <- log_prob(predict(fboost,newx=gbm_test, n.trees=500))
+    gbm_test$campaign2<-1
+prob[2] <- log_prob(predict(fboost,newx=gbm_test, n.trees=500))
+    gbm_test$campaign2<-0
+    gbm_test$campaign3<-1
+prob[3] <- log_prob(predict(fboost,newx=gbm_test, n.trees=500))
+    gbm_test$campaign3<-0
+    gbm_test$campaign4<-1
+prob[4] <- log_prob(predict(fboost,newx=gbm_test, n.trees=500))
+    gbm_test$campaign4<-0
+    gbm_test$campaign5<-1
+prob[5] <- log_prob(predict(fboost,newx=gbm_test, n.trees=500))
 
 
     #For Calls 1 through N, compute likelihood of success by the nth call: p_sub(n)
@@ -907,20 +918,13 @@ if(Calls_to_make<=1) {
   results <-data.frame(Metrics,values)
 #  print(results)
   
-  return(Calls_to_make)
 
-}
-
-
+df_test$Max_calls_gbm[x]<-Calls_to_make
 
 ```
 
 ```{r}
-df_test$Max_calls_gbm<-0
 
-for (x in 1:nrow(df_test)) {
-    df_test$Max_calls_gbm[x] <-Compute_Sample_Profitability_GBM(x)
-  }
 
 hist(df_test$Max_calls_gbm)
 nrow(df_test[df_test$Max_calls_gbm<df_test$campaign])/nrow(df_test)
