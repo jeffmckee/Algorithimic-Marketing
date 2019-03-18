@@ -503,8 +503,53 @@ barplot(c(baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_p
 ```
 
 ```{r}
-df_test[,current_prob := get(paste0("p",df_test$campaign,"_lasso"))]
-df_test[,c('campaign','p1_lasso','p2_lasso','p3_lasso','p4_lasso','p5_lasso','current_prob')]
+model_curve_lasso <- data.frame(n = seq(from = .01, to= 1, by = .01), lasso_profit = 0)
+
+for (n in 1:nrow(df_test)){
+  df_test_profit <- df_test[n, current_prob := get(paste0("p",df_test$campaign[n],"_lasso"))]
+}
+df_test_profit[,rank := frank(current_prob)]
+df_test_profit <- df_test_profit[order(-rank)]
+
+for (p in seq(from = .01, to= 1, by = .01)){
+  n<-round(nrow(df_test_profit)*p)
+  model_curve_lasso[p*100,2] <- df_test_profit[1:n, sum(Class)]*Success_profit - (n-df_test_profit[1:n, sum(Class)])*fail_cost
+}
+```
+
+```{r}
+model_curve_logit <- data.frame(n = seq(from = .01, to= 1, by = .01), logit_profit = 0)
+
+for (n in 1:nrow(df_test)){
+  df_test_profit <- df_test[n, current_prob := get(paste0("p",df_test$campaign[n],"_logit"))]
+}
+df_test_profit[,rank := frank(current_prob)]
+df_test_profit <- df_test_profit[order(-rank)]
+
+for (p in seq(from = .01, to= 1, by = .01)){
+  n<-round(nrow(df_test_profit)*p)
+  model_curve_logit[p*100,2] <- df_test_profit[1:n, sum(Class)]*Success_profit - (n-df_test_profit[1:n, sum(Class)])*fail_cost
+}
+
+```
+
+```{r}
+model_curve_random <- data.frame(n = seq(from = .01, to= 1, by = .01), random_profit = 0)
+
+random_order <- sample(1:nrow(df_test),size=nrow(df_test),replace=FALSE)
+df_test_profit <- df_test[order(random_order)]
+
+for (p in seq(from = .01, to= 1, by = .01)){
+  n<-round(nrow(df_test_profit)*p)
+  model_curve_random[p*100,2] <- df_test_profit[1:n, sum(Class)]*Success_profit - (n-df_test_profit[1:n, sum(Class)])*fail_cost
+}
+
+```
+
+```{r}
+model_curve <- cbind(model_curve_logit,lasso_profit = model_curve_lasso$lasso_profit, random_profit = model_curve_random$random_profit)
+
+ggplot(data=model_curve, main="Profit Curve by Percent Targeted", xlab = "Percent Targeted", ylab = "Profit") + geom_line(aes(x=n,y=lasso_profit,col='LASSO')) + geom_line(aes(x=n,y=logit_profit, col = 'Logit')) + geom_line(aes(x=n,y=random_profit, col = 'Random'))
 ```
 
 ```{r}
