@@ -105,6 +105,9 @@ legend("topleft",legend=c("alpha= 1","alpha= .5","alpha 0"),pch=19,col=c("red","
 
 ```{r}
 # test_reg   <-glm(Class~(age+jobadmin.+jobbluecollar+jobentrepreneur+jobhousemaid+jobmanagement+jobretired+jobselfemployed+jobservices+jobstudent+jobtechnician+jobunemployed+jobunknown) *( campaign2+campaign3)+campaign4+campaign5+maritalsingle+maritalunknown+educationbasic.6y+educationbasic.9y+educationhigh.school+educationilliterate+educationprofessional.course+educationuniversity.degree+educationunknown+defaultunknown+defaultyes+housingunknown+housingyes+loanunknown+loanyes,family='binomial',data=model_df)
+# save(test_reg, file="test_reg.rda")
+
+load(file="test_reg.rda")
 ```
 
 ```{r}
@@ -213,7 +216,9 @@ if(Calls_to_make<=1) {
   results <-data.frame(Metrics,values)
 #  print(results)
   
-  return(Calls_to_make)
+  return_frame <- data.frame(max_calls = Calls_to_make, p1 = prob[1], p2 = prob[2], p3 = prob[3], p4 = prob[4], p5 = prob[5])
+  
+  return(return_frame)
 
 }
 
@@ -226,7 +231,7 @@ if(Calls_to_make<=1) {
 
 Compute_Sample_Profitability_LASSO<-function(obs,model){
           sample_person <-df_test[obs]
-          
+
 #Loops through prediction turning on campaigns to calculate probabilities of success on calls 1:5
 prob <-rep(NA,5)
     sample_person$campaign2<-0
@@ -311,8 +316,9 @@ if(Calls_to_make<=1) {
   results <-data.frame(Metrics,values)
 #  print(results)
   
-  return(Calls_to_make)
-
+  return_frame <- data.frame(max_calls = Calls_to_make, p1 = prob[1], p2 = prob[2], p3 = prob[3], p4 = prob[4], p5 = prob[5])
+  
+  return(return_frame)
 }
 
 ```
@@ -321,38 +327,13 @@ if(Calls_to_make<=1) {
 ```{r}
 # #Predict decisions (max calls to make) for test dataset using lasso
 # 
-# df_test$Max_calls_ridge<-0
+# lasso_results <- data.frame(Max_calls_lasso = rep(0,nrow(df_test)), p1_lasso = rep(0,nrow(df_test)), p2_lasso = rep(0,nrow(df_test)), p3_lasso = rep(0,nrow(df_test)), p4_lasso = rep(0,nrow(df_test)), p5_lasso = rep(0,nrow(df_test)))
 # 
 # for (x in 1:nrow(df_test)) {
-#   df_test$Max_calls_ridge[x] <-Compute_Sample_Profitability_LASSO(x, cv_ridge)
+#   lasso_results[x,] <-Compute_Sample_Profitability_LASSO(x, cv_lasso)
 #   }
 # 
-# hist(df_test$Max_calls_ridge)
-# nrow(df_test[df_test$Max_calls_ridge<df_test$campaign])/nrow(df_test)
-
-```
-```{r}
-# #Predict decisions (max calls to make) for test dataset using lasso
-# 
-# df_test$Max_calls_enet<-0
-# 
-# for (x in 1:nrow(df_test)) {
-#   df_test$Max_calls_enet[x] <-Compute_Sample_Profitability_LASSO(x, cv_enet)
-#   }
-# 
-# hist(df_test$Max_calls_enet)
-# nrow(df_test[df_test$Max_calls_enet<df_test$campaign])/nrow(df_test)
-
-```
-
-```{r}
-# #Predict decisions (max calls to make) for test dataset using lasso
-# 
-# df_test$Max_calls_lasso<-0
-# 
-# for (x in 1:nrow(df_test)) {
-#   df_test$Max_calls_lasso[x] <-Compute_Sample_Profitability_LASSO(x, cv_lasso)
-#   }
+# df_test <- cbind(df_test,lasso_results)
 # 
 # hist(df_test$Max_calls_lasso)
 # nrow(df_test[df_test$Max_calls_lasso<df_test$campaign])/nrow(df_test)
@@ -360,17 +341,53 @@ if(Calls_to_make<=1) {
 ```
 
 ```{r}
+# #Predict decisions (max calls to make) for test dataset using ridge
+# 
+# enet_results <- data.frame(Max_calls_enet = rep(0,nrow(df_test)), p1_enet = rep(0,nrow(df_test)), p2_enet = rep(0,nrow(df_test)), p3_enet = rep(0,nrow(df_test)), p4_enet = rep(0,nrow(df_test)), p5_enet = rep(0,nrow(df_test)))
+# 
+# for (x in 1:nrow(df_test)) {
+#   enet_results[x,] <-Compute_Sample_Profitability_LASSO(x, cv_enet)
+#   }
+# 
+# df_test <- cbind(df_test,enet_results)
+# 
+# hist(df_test$Max_calls_enet)
+# nrow(df_test[df_test$Max_calls_enet<df_test$campaign])/nrow(df_test)
+
+```
+
+```{r}
+# #Predict decisions (max calls to make) for test dataset using ridge
+# 
+# ridge_results <- data.frame(Max_calls_ridge = rep(0,nrow(df_test)), p1_ridge = rep(0,nrow(df_test)), p2_ridge = rep(0,nrow(df_test)), p3_ridge = rep(0,nrow(df_test)), p4_ridge = rep(0,nrow(df_test)), p5_ridge = rep(0,nrow(df_test)))
+# 
+# for (x in 1:nrow(df_test)) {
+#   ridge_results[x,] <-Compute_Sample_Profitability_LASSO(x, cv_ridge)
+#   }
+# 
+# df_test <- cbind(df_test,ridge_results)
+# 
+# hist(df_test$Max_calls_ridge)
+# nrow(df_test[df_test$Max_calls_ridge<df_test$campaign])/nrow(df_test)
+
+```
+
+```{r}
 # #make decision for logit (employment) model
-# df_test$Max_calls_logit<-0
+# logit_results <- data.frame(Max_calls_logit = rep(0,nrow(df_test)), p1_logit = rep(0,nrow(df_test)), p2_logit = rep(0,nrow(df_test)), p3_logit = rep(0,nrow(df_test)), p4_logit = rep(0,nrow(df_test)), p5_logit = rep(0,nrow(df_test)))
 # 
 # suppressWarnings( for (x in 1:nrow(df_test)) {
-#   df_test$Max_calls_logit[x] <-Compute_Sample_Profitability(x)
+#   logit_results[x,] <-Compute_Sample_Profitability(x)
 #   }
 # )
+# 
+# df_test <- cbind(df_test,logit_results)
+# 
 # hist(df_test$Max_calls_logit)
 # nrow(df_test[df_test$Max_calls_logit<df_test$campaign])/nrow(df_test)
 
 ```
+
 ```{r}
 # save(df_test,file='df_test.rda')
 
