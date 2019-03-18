@@ -502,6 +502,10 @@ barplot(c(baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_p
 
 ```
 
+```{r}
+df_test[,current_prob := get(paste0("p",df_test$campaign,"_lasso"))]
+df_test[,c('campaign','p1_lasso','p2_lasso','p3_lasso','p4_lasso','p5_lasso','current_prob')]
+```
 
 ```{r}
 ### KNN - euclidean approach. when using full_df, there are no predicted conversions
