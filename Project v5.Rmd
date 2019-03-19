@@ -79,7 +79,7 @@ full_df[,campaign3 := ifelse(campaign_no == 3, 1,0)]
 full_df[,campaign4 := ifelse(campaign_no == 4, 1,0)]
 full_df[,campaign5 := ifelse(campaign_no == 5, 1,0)]
 model_df<-full_df[campaign_no<=5,c(56,1:30,47:49, 59:62)]
-x_matrix <- model.matrix(Class~.*(campaign2+campaign3+campaign4+campaign5)-campaign2*(campaign3+campaign4+campaign5)-campaign3*(campaign4+campaign5)-campaign4*campaign5-1,data=model_df)
+x_matrix <- model.matrix(Class~.*(campaign2+campaign3+campaign4+campaign5)-campaign2*(campaign3+campaign4+campaign5)-campaign3*(campaign4+campaign5)-campaign4*campaign5+campaign2+campaign3+campaign4+campaign5-1,data=model_df)
 
 ```
 
@@ -101,6 +101,8 @@ plot(log(cv_lasso$lambda),cv_lasso$cvm,pch=19,col="red",xlab="log(Lambda)",ylab=
 points(log(cv_enet$lambda),cv_enet$cvm,pch=19,col="grey")
 points(log(cv_ridge$lambda),cv_ridge$cvm,pch=19,col="blue")
 legend("topleft",legend=c("alpha= 1","alpha= .5","alpha 0"),pch=19,col=c("red","grey","blue"))
+
+lasso_coefficients <- predict(cv_lasso,type="coefficients")
 ```
 
 ```{r}
