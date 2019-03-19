@@ -34,11 +34,13 @@ df <- read.csv("bank_additional_full.csv")
 
 levels(df$job)[2] <- "bluecollar"
 levels(df$job)[7] <- "selfemployed"
-
+df2 <- df
 
 df <- as.data.table(model.matrix(~.-1,df))
 # colnames(df)[colnames(df)=="ytrue"] <- "outcome"
 df$Class <- ifelse(df$ytrue==1,TRUE,FALSE)
+df2$Class <- ifelse(df2$y=="true",TRUE,FALSE)
+
 ```
 
 ```{r}
@@ -65,6 +67,7 @@ train_ind <- sample(seq_len(nrow(df)), size = training_size)
 df_train <- df[train_ind, ]
 
 df_test <- df[-train_ind, ]
+
 df_test[df_test$campaign>5,'Class']<-FALSE
 df_test$campaign[df_test$campaign>5]<-5
 df_test[,campaign2 := ifelse(campaign == 2, 1,0)]
@@ -627,25 +630,41 @@ nnresult
 
 * update trees to predict probabilities
 * update prediction algorithm to evaluate profit with matrix vs. individual
+```{r}
+set.seed(99)
+training_size <- floor(0.80 * nrow(df))
+train_ind <- sample(seq_len(nrow(df)), size = training_size)
+
+df_train2<-df2[train_ind,c(22,1:8,14:15, 12)]
+df_test2<-df2[-train_ind,c(22,1:8,14:15, 12)]
+
+
+```
 
 
 ## Regression Tree
+
+
+
 ```{r}
 set.seed(99)
-fit1 = rpart(Class~., data=model_df, control=rpart.control(minsplit=5, cp=0.0001, xval=10))
+
+#alt: data=model_df
+#alt: data=df_train
+fit1 = rpart(Class~., data=model_df, control=rpart.control(minsplit=5, cp=0.0001, xval=10), method="class")
 
 nbig = length(unique(fit1$where))
 cat('Size of big tree: ',nbig,'\n')
 
-cat('RMSE=',sqrt(mean((df_test$Class-predict(fit1,df_test))^2)),'\n')
+cat('RMSE=',sqrt(mean((df_test$Class-predict(fit1,df_test,type="prob")[,2])^2)),'\n')
 
-(cptable = printcp(fit1))
-(bestcp = cptable[ which.min(cptable[,"xerror"]), "CP" ])   
+cptable = printcp(fit1)
+bestcp = cptable[ which.min(cptable[,"xerror"]), "CP" ]
 fit1B = prune(fit1,cp=bestcp)
 nbigB = length(unique(fit1B$where))
 cat('Size of pruned tree: ',nbigB,'\n')
 
-cat('RMSE=',sqrt(mean((df_test$Class-predict(fit1B,df_test))^2)),'\n')
+cat('RMSE=',sqrt(mean((df_test$Class-predict(fit1B,df_test,type="prob")[,2])^2)),'\n')
 ```
 
 ```{r}
@@ -653,115 +672,84 @@ cat('RMSE=',sqrt(mean((df_test$Class-predict(fit1B,df_test))^2)),'\n')
 
         #Cost- Relevant inputs: hourly wage, average call information (separate averages for failures and successes          b/c they have drastically different lengths)
 
-Compute_Sample_Profitability_Tree<-function(obs){
-          sample_person <-df_test[obs]
+sample_tree <-df_test
           
 #Loops through prediction turning on campaigns to calculate probabilities of success on calls 1:5
-prob <-rep(NA,5)
-    sample_person$campaign2<-0
-    sample_person$campaign3<-0
-    sample_person$campaign4<-0
-    sample_person$campaign5<-0
-    tree_test<-sample_person[,c(56,1:30,47:49, 58:61)]
-prob[1] <- predict(fit1,newx=tree_test)[obs]
-    sample_person$campaign2<-1
-prob[2] <- predict(fit1,newx=tree_test)[obs]
-    sample_person$campaign2<-0
-    sample_person$campaign3<-1
-prob[3] <- predict(fit1,newx=tree_test)[obs]
-    sample_person$campaign3<-0
-    sample_person$campaign4<-1
-prob[4] <- predict(fit1,newx=tree_test)[obs]
-    sample_person$campaign4<-0
-    sample_person$campaign5<-1
-prob[5] <- predict(fit1,newx=tree_test)[obs]
-
+#prob <-rep(NA,nrow(sample_tree),5)
+    sample_tree$campaign2<-0
+    sample_tree$campaign3<-0
+    sample_tree$campaign4<-0
+    sample_tree$campaign5<-0
+    tree_test<-sample_tree[,c(56,1:30,47:49, 58:61)]
+prob1 <- predict(fit1,newdata=tree_test,type="prob")[,2]
+    tree_test$campaign2<-1
+prob2 <- predict(fit1,newdata=tree_test,type="prob")[,2]
+    tree_test$campaign2<-0
+    tree_test$campaign3<-1
+prob3 <- predict(fit1,newdata=tree_test,type="prob")[,2]
+    tree_test$campaign3<-0
+    tree_test$campaign4<-1
+prob4 <- predict(fit1,newdata=tree_test,type="prob")[,2]
+    tree_test$campaign4<-0
+    tree_test$campaign5<-1
+prob5 <- predict(fit1,newdata=tree_test,type="prob")[,2]
+prob<-cbind(prob1,prob2,prob3,prob4,prob5)
 
     #For Calls 1 through N, compute likelihood of success by the nth call: p_sub(n)
         
-p_sub<-rep(NA,5)
-  p_sub[1]<-prob[1]
-  for (i in 2:5) {
-    p_sub[i] <-p_sub[i-1]+prob[i]*(1-p_sub[i-1])
-  }
+p_sub1 <- prob[,1]
+p_sub2 <- p_sub1+prob[,2]*(1-p_sub1)
+p_sub3 <- p_sub2+prob[,3]*(1-p_sub2)
+p_sub4 <- p_sub3+prob[,4]*(1-p_sub3)
+p_sub5 <- p_sub4+prob[,5]*(1-p_sub4)
 
   
   #For calls 1 through N, compute lift of call n: lift(n)= p_sub(n) - p_sub(n-1) (this represents unconditional probability of success on call n)
-lift<-rep(NA,5)
-  lift[1]<-p_sub[1]
-  for (i in 2:5) {
-    lift[i] <-p_sub[i]-p_sub[i-1]
-  }
-  
+
+lift1 <- p_sub1
+lift2 <- p_sub2-p_sub1
+lift3 <- p_sub3-p_sub2
+lift4 <- p_sub4-p_sub3
+lift5 <- p_sub5-p_sub4
+
 #Compute number of calls to target for a given customer (N.B.: As long as probability of success is declining monotonically, as soon as the nth call is not profitable, the (n+1)th call will also not be profitable.) 
   #Test: Identify whether the nth call (if made) would be profitable. THis is simple:
    #Profit(n|All calls prior="no")=[Profit of Success]*p_sub(n) -[Cost of Failure]*(1-p_sub(n)) 
-  Profit <- rep(NA,5)
-  for (i in 1:5){
-    Profit[i] <- Success_profit*prob[i]-fail_cost*(1-prob[i])
-  }
-  #Decision: for the first unprofitable call "A," choose  A-1 as the target number of calls.
-  Calls_to_make<-0
-  Calls_to_make <-NROW(Profit[Profit>0])
-  #based out this decision (target customer with A-1 calls), also compute 
-    #(1) the expected number of calls with that rule(this is not simply A-1 b/c customer may sign up earlier), and
-Expected_calls <- 0
-if(Calls_to_make<=1) {
-  Expected_calls<-Calls_to_make
-}  else {
-    for (i in 1:(Calls_to_make-1)){
-      Expected_calls<-Expected_calls+i*lift[i]
-    }
-    Expected_calls<-Expected_calls+Calls_to_make*(1-p_sub[Calls_to_make-1])
-  }
 
-    #(2) the expected profit from this strategy (weighted average of profitabilities forscenarios given this targeting plan, weighting each scenario by lift(n) and then adding together)
-  
-  
-  Expected_profit <- 0
-  if (Calls_to_make>0){
-    for (i in 1:Calls_to_make){
-      Expected_profit <-Expected_profit+lift[i]*(Success_profit-fail_cost*(i-1))
-    }
-    Expected_profit <-Expected_profit-fail_cost*Calls_to_make*(1-p_sub[Calls_to_make])
-  } 
+profit1 <- Success_profit*prob1-fail_cost*(1-prob1)
+profit2 <- Success_profit*prob2-fail_cost*(1-prob2)
+profit3 <- Success_profit*prob3-fail_cost*(1-prob3)
+profit4 <- Success_profit*prob4-fail_cost*(1-prob4)
+profit5 <- Success_profit*prob5-fail_cost*(1-prob5)
+Profit <- cbind(profit1,profit2,profit3,profit4,profit5)
 
-  Metrics <-c("Euribor","Max Calls","Expected Calls", "Profit")
-  values<-c(Market_rate,Calls_to_make,Expected_calls,Expected_profit)
-  results <-data.frame(Metrics,values)
-#  print(results)
-  
-  return(Calls_to_make)
+Calls_to_make <-rowSums(Profit>0)
+Success_calls <- ifelse(Calls_to_make>=df_test$campaign & df_test$Class,df_test$campaign,0)
+Fail_calls <- ifelse(Calls_to_make>=df_test$campaign,ifelse(!df_test$Class,df_test$campaign,df_test$campaign-1),Calls_to_make)
+                     
 
-}
+# Calls_to_make is the number of calls you plan to make with this strategy
+# Success_calls is 0 if you don't call them OR call and don't make a sale; if you experience success on that call, it represents the call number on which you were successful
+# Fail_calls
 
-
+( Expected_profit <- -fail_cost*sum(Fail_calls) + Success_profit*sum(Success_calls>0) )
 
 ```
 
-```{r}
-df_test$Max_calls_tree<-0
-
-for (x in 1:nrow(df_test)) {
-    df_test$Max_calls_tree[x] <-Compute_Sample_Profitability_Tree(x)
-  }
-
-hist(df_test$Max_calls_tree)
-nrow(df_test[df_test$Max_calls_tree<df_test$campaign])/nrow(df_test)
-
-```
+# Simple tree profit
 
 ```{r}
-
-#tree profit
 tree_profit <-0
+
 for (x in 1:nrow(df_test)) {
-  if  (df_test$campaign[x]>df_test$Max_calls_tree[x]){
-      -df_test$Max_calls_tree[x]*fail_cost 
+  if  (df_test$campaign[x]>Calls_to_make[x]){
+      tree_profit<-tree_profit-Calls_to_make[x]*fail_cost 
       } else {
                 if(df_test$Class[x]=="FALSE"){ 
                   tree_profit<-tree_profit-df_test$campaign[x]*fail_cost
-                  } else { tree_profit<-tree_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost}
+                } else { 
+                    tree_profit<-tree_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost
+                    }
               }
 
 }
