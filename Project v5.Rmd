@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(caret)
 library(data.table)
+library(kableExtra)
 library(glmnet)
 library(rpart)
 library(rpart.plot)
@@ -102,7 +103,11 @@ points(log(cv_enet$lambda),cv_enet$cvm,pch=19,col="grey")
 points(log(cv_ridge$lambda),cv_ridge$cvm,pch=19,col="blue")
 legend("topleft",legend=c("alpha= 1","alpha= .5","alpha 0"),pch=19,col=c("red","grey","blue"))
 
-lasso_coefficients <- predict(cv_lasso,type="coefficients")
+predict(cv_lasso,type="nonzero")
+nonzero <- c(1,8,11,25,31,32,34)
+lasso_coefficients <- predict(cv_lasso,type='coefficients')
+nonzero_coeffs <- row.names(lasso_coefficients)[nonzero]
+kable(lasso_coefficients[nonzero_coeffs,])
 ```
 
 ```{r}
