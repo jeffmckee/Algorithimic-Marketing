@@ -512,8 +512,13 @@ df_test_profit[,rank := frank(current_prob)]
 df_test_profit <- df_test_profit[order(-rank)]
 
 for (p in seq(from = .01, to= 1, by = .01)){
-  n<-round(nrow(df_test_profit)*p)
-  model_curve_lasso[p*100,2] <- df_test_profit[1:n, sum(Class)]*Success_profit - (n-df_test_profit[1:n, sum(Class)])*fail_cost
+  num<-round(nrow(df_test_profit)*p)
+  model_curve_lasso[p*100,2] <- df_test_profit[1:num, sum(Class)]*Success_profit - (num-df_test_profit[1:num, sum(Class)])*fail_cost
+}
+
+for (p in c(.06,.07)){
+  num<-round(nrow(df_test_profit)*p)
+  model_curve_lasso[p*100,2] <- df_test_profit[1:num, sum(Class)]*Success_profit - (num-df_test_profit[1:num, sum(Class)])*fail_cost
 }
 ```
 
@@ -527,8 +532,13 @@ df_test_profit[,rank := frank(current_prob)]
 df_test_profit <- df_test_profit[order(-rank)]
 
 for (p in seq(from = .01, to= 1, by = .01)){
-  n<-round(nrow(df_test_profit)*p)
-  model_curve_logit[p*100,2] <- df_test_profit[1:n, sum(Class)]*Success_profit - (n-df_test_profit[1:n, sum(Class)])*fail_cost
+  num<-round(nrow(df_test_profit)*p)
+  model_curve_logit[p*100,2] <- df_test_profit[1:num, sum(Class)]*Success_profit - (num-df_test_profit[1:num, sum(Class)])*fail_cost
+}
+
+for (p in c(.06,.07)){
+  num<-round(nrow(df_test_profit)*p)
+  model_curve_logit[p*100,2] <- df_test_profit[1:num, sum(Class)]*Success_profit - (num-df_test_profit[1:num, sum(Class)])*fail_cost
 }
 
 ```
@@ -540,8 +550,13 @@ random_order <- sample(1:nrow(df_test),size=nrow(df_test),replace=FALSE)
 df_test_profit <- df_test[order(random_order)]
 
 for (p in seq(from = .01, to= 1, by = .01)){
-  n<-round(nrow(df_test_profit)*p)
-  model_curve_random[p*100,2] <- df_test_profit[1:n, sum(Class)]*Success_profit - (n-df_test_profit[1:n, sum(Class)])*fail_cost
+  num<-round(nrow(df_test_profit)*p)
+  model_curve_random[p*100,2] <- df_test_profit[1:num, sum(Class)]*Success_profit - (num-df_test_profit[1:num, sum(Class)])*fail_cost
+}
+
+for (p in c(.06,.07)){
+  num<-round(nrow(df_test_profit)*p)
+  model_curve_random[p*100,2] <- df_test_profit[1:num, sum(Class)]*Success_profit - (num-df_test_profit[1:num, sum(Class)])*fail_cost
 }
 
 ```
