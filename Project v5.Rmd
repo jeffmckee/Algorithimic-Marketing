@@ -1,7 +1,9 @@
 ---
 title: "Final Project"
 author: "Warren Speth, Jeff McKee, Verdon Tsang, Jacob Bennett"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -902,6 +904,20 @@ for (p in c(.06,.07)){
 model_curve <- cbind(model_curve_logit,lasso_profit = model_curve_lasso$lasso_profit, gbm_profit = model_curve_gbm$gbm_profit, random_profit = model_curve_random$random_profit)
 
 ggplot(data=model_curve) + geom_line(aes(x=n,y=lasso_profit,col='LASSO')) + geom_line(aes(x=n,y=logit_profit, col = 'Logit')) + geom_line(aes(x=n,y=random_profit, col = 'Random')) + geom_line(aes(x=n,y=gbm_profit, col = 'GBM')) + labs(title="Total Profits by Percent Targeted", x = "Percent Targeted", y = "Profits", color = "Model") + scale_color_manual(values=c("LASSO"="blue", "GBM"="red", "Logit"="green", "Random"="black")) + theme(plot.title = element_text(hjust = 0.5))
+```
+
+# Output interface of prioritized list of leads for telemarketers
+
+```{r}
+raw_data <- read.csv("bank_additional_full.csv")
+raw_data <- as.data.table(raw_data)
+interface <- raw_data[,cust_id := .I]
+interface <- interface[y=="false",c('cust_id','age','job','marital','education','campaign')]
+interface <- merge(x=interface, y=df_test[,c('current_prob','Max_calls_lasso','ID')], by.x='cust_id', by.y='ID', all.x = FALSE, all.y = FALSE)
+interface[,priority := frank(-current_prob,ties.method="first")]
+names(interface)[c(6,8)] <- c('campaign_calls_received','maximum_times_to_call')
+interface <- interface[order(priority),c(9,1:6)]
+head(interface,10)
 ```
 
 # Section 6. k Nearest Neighbors
