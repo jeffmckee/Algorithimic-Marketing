@@ -809,7 +809,8 @@ gbm_profit <- -fail_cost*sum(fail_calls_gbm) + Success_profit*sum(success_calls_
 # Section 5. Compare models
 
 ```{r}
-profit_plot <- barplot(c(random_profit,baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit, gbm_profit), names = c("random","baseline","two-call","three-call","logit","lasso","gbm"),ylim=c(0,10000), main="Profits by Strategy", xlab="Strategy", ylab="Profits", col = c('gray','gray','gray','gray','blue','blue','blue'))
+profit_plot <- barplot(c(random_profit,baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit, gbm_profit), names = c("random","baseline","two-call","three-call","logit","lasso","gbm"),ylim=c(0,10000), main="Profits by Strategy", xlab="Strategy", ylab="Profits", col = c('gray','gray','gray','gray','green','blue','red'))
+text(profit_plot,c(random_profit,baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit, gbm_profit)+300, labels=format(c(random_profit,baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit, gbm_profit),digits=0))
 ```
 
 
