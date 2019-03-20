@@ -776,26 +776,6 @@ text(profit_plot,c(baseline_profit,two_call_profit,three_call_profit,logit_profi
 ```
 
 ```{r}
-model_curve_lasso <- data.frame(n = seq(from = .01, to= 1, by = .01), lasso_profit = 0)
-
-for (n in 1:nrow(df_test)){
-  df_test_profit <- df_test[n, current_prob := get(paste0("p",df_test$campaign[n],"_lasso"))]
-}
-df_test_profit[,rank := frank(current_prob)]
-df_test_profit <- df_test_profit[order(-rank)]
-
-for (p in seq(from = .01, to= 1, by = .01)){
-  num<-round(nrow(df_test_profit)*p)
-  model_curve_lasso[p*100,2] <- df_test_profit[1:num, sum(Class)]*Success_profit - (num-df_test_profit[1:num, sum(Class)])*fail_cost
-}
-
-for (p in c(.06,.07)){
-  num<-round(nrow(df_test_profit)*p)
-  model_curve_lasso[p*100,2] <- df_test_profit[1:num, sum(Class)]*Success_profit - (num-df_test_profit[1:num, sum(Class)])*fail_cost
-}
-```
-
-```{r}
 model_curve_logit <- data.frame(n = seq(from = .01, to= 1, by = .01), logit_profit = 0)
 
 for (n in 1:nrow(df_test)){
@@ -817,6 +797,48 @@ for (p in c(.06,.07)){
 ```
 
 ```{r}
+model_curve_lasso <- data.frame(n = seq(from = .01, to= 1, by = .01), lasso_profit = 0)
+
+for (n in 1:nrow(df_test)){
+  df_test_profit <- df_test[n, current_prob := get(paste0("p",df_test$campaign[n],"_lasso"))]
+}
+df_test_profit[,rank := frank(current_prob)]
+df_test_profit <- df_test_profit[order(-rank)]
+
+for (p in seq(from = .01, to= 1, by = .01)){
+  num<-round(nrow(df_test_profit)*p)
+  model_curve_lasso[p*100,2] <- df_test_profit[1:num, sum(Class)]*Success_profit - (num-df_test_profit[1:num, sum(Class)])*fail_cost
+}
+
+for (p in c(.06,.07)){
+  num<-round(nrow(df_test_profit)*p)
+  model_curve_lasso[p*100,2] <- df_test_profit[1:num, sum(Class)]*Success_profit - (num-df_test_profit[1:num, sum(Class)])*fail_cost
+}
+```
+
+```{r}
+model_curve_gbm <- data.frame(n = seq(from = .01, to= 1, by = .01), gbm_profit = 0)
+
+df_test_profit <- df_test
+
+for (n in 1:nrow(df_test)){
+  df_test_profit[n,'current_prob'] <- as.numeric(prob_gbm[n,df_test$campaign[n]])
+}
+df_test_profit <- df_test_profit[,rank := frank(df_test_profit$current_prob)]
+df_test_profit <- df_test_profit[order(-rank)]
+
+for (p in seq(from = .01, to= 1, by = .01)){
+  num<-round(nrow(df_test_profit)*p)
+  model_curve_gbm[p*100,2] <- df_test_profit[1:num, sum(Class)]*Success_profit - (num-df_test_profit[1:num, sum(Class)])*fail_cost
+}
+
+for (p in c(.06,.07)){
+  num<-round(nrow(df_test_profit)*p)
+  model_curve_gbm[p*100,2] <- df_test_profit[1:num, sum(Class)]*Success_profit - (num-df_test_profit[1:num, sum(Class)])*fail_cost
+}
+```
+
+```{r}
 model_curve_random <- data.frame(n = seq(from = .01, to= 1, by = .01), random_profit = 0)
 
 random_order <- sample(1:nrow(df_test),size=nrow(df_test),replace=FALSE)
@@ -835,9 +857,9 @@ for (p in c(.06,.07)){
 ```
 
 ```{r}
-model_curve <- cbind(model_curve_logit,lasso_profit = model_curve_lasso$lasso_profit, random_profit = model_curve_random$random_profit)
+model_curve <- cbind(model_curve_logit,lasso_profit = model_curve_lasso$lasso_profit, gbm_profit = model_curve_gbm$gbm_profit, random_profit = model_curve_random$random_profit)
 
-ggplot(data=model_curve, main="Profit Curve by Percent Targeted", xlab = "Percent Targeted", ylab = "Profit") + geom_line(aes(x=n,y=lasso_profit,col='LASSO')) + geom_line(aes(x=n,y=logit_profit, col = 'Logit')) + geom_line(aes(x=n,y=random_profit, col = 'Random'))
+ggplot(data=model_curve) + geom_line(aes(x=n,y=lasso_profit,col='LASSO')) + geom_line(aes(x=n,y=logit_profit, col = 'Logit')) + geom_line(aes(x=n,y=random_profit, col = 'Random')) + geom_line(aes(x=n,y=gbm_profit, col = 'GBM')) + labs(title="Profit Curve by Percent Targeted", x = "Percent Targeted", y = "Profit", color = "Model")
 ```
 
 
