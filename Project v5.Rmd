@@ -20,8 +20,6 @@ library(randomForest)
 library(xgboost)
 library(gbm)
 library(class)
-library(pvclass)
-library(knnGarden)
 
 log_prob <- function(pred){
   1/(1+exp(-pred))
@@ -578,7 +576,8 @@ ggplot(data=model_curve, main="Profit Curve by Percent Targeted", xlab = "Percen
 ```
 
 ```{r}
-### KNN - euclidean approach. when using full_df, there are no predicted conversions
+### Lookalike modeling - kNN. This section uses the same training and testing samples as other modeling approaches. Neighbor votes from 1 to 20 neighbors, as defined by Euclidean distance, are explored.  We also explored using Mahalanobis (i.e., variance-weighted) distances, but the computing power required to do so made implementation impractical. As shown in our slides and executive summary, kNN is not an effective approach at this scale. However, the approach yieled high specificity--but low target rates--at high neighbor counts, suggesting kNN may be appropriate with larger prospect lists, such as those enabled by social media marketing channels.
+
 TrnX <- df_train[,1:30]
 OrigTrnG <- df_train$Class
 
@@ -614,14 +613,6 @@ load(file="nnresult.rda")
 write.csv(nnresult, "knn_result.csv")
 nnresult
 
-
-### KNN with Mahalanobis distances: computationally taxing; cannot compute enough to compare against model
-## first Mahalanobis approach: knnGarden package
-#install.packages("knnGarden")
-#knnMCN(TrnX=TrnX[1:1000,],OrigTrnG=OrigTrnG[1:1000],TstX=TstX[1:200,],ShowObs=FALSE,K=1)
-
-## second Mahalanobis approach: pvclass package. computationally taxing; subsetted to 1000 rows in dev 
-#knnout <- cvpvs.knn(TrnX[1:1000], OrigTrnG[1:1000], k = 1, distance = 'mahalanobis', cova = 'standard')
 ```
 
 
