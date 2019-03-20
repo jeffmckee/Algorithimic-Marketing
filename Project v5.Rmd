@@ -193,6 +193,8 @@ varImp(fboost, numTrees = 500)
 ## Assign Profitiability Parameters 
 
 ```{r}
+#Relevant Outputs: fail_cost (cost of call resulting in failure), Success_profit (net profit of call resulting in success)
+
 #ASSUMPTIONS:
 
           wage <-12 #Estimate of hourly wage 
@@ -202,7 +204,6 @@ varImp(fboost, numTrees = 500)
           fail_cost<-wage*(fail_time+Inter_call_time)
           success_cost <-wage*(success_time+Inter_call_time)
           
-  #Output: [cost of failure], [cost of success/signup]
 #Profit from successful customer: According to a paper, CD rates in the Netherlands average ~60% of Euribor rates (https://onlinelibrary.wiley.com/doi/full/10.1111/irfi.12143)
           Market_rate <-.025 
           CD_rate <-Market_rate*.6
@@ -217,12 +218,11 @@ varImp(fboost, numTrees = 500)
 ```{r}
 #Generate estimates of cost per call, benefit (revenue/profit) of time deposit product for bank
 
-        #Cost- Relevant inputs: hourly wage, average call information (separate averages for failures and successes          b/c they have drastically different lengths)
 
 Compute_Sample_Profitability<-function(obs){
           sample_person <-df_test[obs]
           
-    #from regression coefficients + person's info: Simple prediction of success likelihood on the nth call "prob(n)" (conditional on failures for all previous calls)
+#from regression coefficients + person's info: Simple prediction of success likelihood on the nth call "prob(n)" (conditional on failures for all previous calls)
 
 #Loops through prediction turning on campaigns to calculate probabilities of success on calls 1:5
 prob <-rep(NA,5)
@@ -245,7 +245,7 @@ prob[5] <-log_prob(predict(test_reg,sample_person))
     sample_person$campaign5<-0
 
 
-    #For Calls 1 through N, compute likelihood of success by the nth call: p_sub(n)
+#For Calls 1 through N, compute likelihood of success by the nth call: p_sub(n)
         
 p_sub<-rep(NA,5)
   p_sub[1]<-prob[1]
@@ -254,7 +254,7 @@ p_sub<-rep(NA,5)
   }
 
   
-  #For calls 1 through N, compute lift of call n: lift(n)= p_sub(n) - p_sub(n-1) (this represents unconditional probability of success on call n)
+#For calls 1 through N, compute lift of call n (this represents unconditional probability of success on call n)
 lift<-rep(NA,5)
   lift[1]<-p_sub[1]
   for (i in 2:5) {
@@ -262,8 +262,8 @@ lift<-rep(NA,5)
   }
   
 #Compute number of calls to target for a given customer (N.B.: As long as probability of success is declining monotonically, as soon as the nth call is not profitable, the (n+1)th call will also not be profitable.) 
-  #Test: Identify whether the nth call (if made) would be profitable. THis is simple:
-   #Profit(n|All calls prior="no")=[Profit of Success]*p_sub(n) -[Cost of Failure]*(1-p_sub(n)) 
+  
+  #Test: Identify whether the nth call (if made) would be profitable: Profit(n|All calls prior="no")=[Profit of Success]*p_sub(n) -[Cost of Failure]*(1-p_sub(n)) 
   Profit <- rep(NA,5)
   for (i in 1:5){
     Profit[i] <- Success_profit*prob[i]-fail_cost*(1-prob[i])
@@ -271,7 +271,7 @@ lift<-rep(NA,5)
   #Decision: for the first unprofitable call "A," choose  A-1 as the target number of calls.
   Calls_to_make<-0
   Calls_to_make <-NROW(Profit[Profit>0])
-  #based out this decision (target customer with A-1 calls), also compute 
+  #based out this decision (target customer with A-1 calls), also compute: 
     #(1) the expected number of calls with that rule(this is not simply A-1 b/c customer may sign up earlier), and
 Expected_calls <- 0
 if(Calls_to_make<=1) {
@@ -312,7 +312,6 @@ if(Calls_to_make<=1) {
 ```{r}
 #Generate estimates of cost per call, benefit (revenue/profit) of time deposit product for bank
 
-        #Cost- Relevant inputs: hourly wage, average call information (separate averages for failures and successes          b/c they have drastically different lengths)
 
 Compute_Sample_Profitability_LASSO<-function(obs,model){
           sample_person <-df_test[obs]
@@ -356,7 +355,7 @@ p_sub<-rep(NA,5)
   }
 
   
-  #For calls 1 through N, compute lift of call n: lift(n)= p_sub(n) - p_sub(n-1) (this represents unconditional probability of success on call n)
+  #For calls 1 through N, compute lift of call n (this represents unconditional probability of success on call n)
 lift<-rep(NA,5)
   lift[1]<-p_sub[1]
   for (i in 2:5) {
@@ -364,8 +363,7 @@ lift<-rep(NA,5)
   }
   
 #Compute number of calls to target for a given customer (N.B.: As long as probability of success is declining monotonically, as soon as the nth call is not profitable, the (n+1)th call will also not be profitable.) 
-  #Test: Identify whether the nth call (if made) would be profitable. THis is simple:
-   #Profit(n|All calls prior="no")=[Profit of Success]*p_sub(n) -[Cost of Failure]*(1-p_sub(n)) 
+  #Test: Identify whether the nth call (if made) would be profitable: Profit(n|All calls prior="no")=[Profit of Success]*p_sub(n) -[Cost of Failure]*(1-p_sub(n)) 
   Profit <- rep(NA,5)
   for (i in 1:5){
     Profit[i] <- Success_profit*prob[i]-fail_cost*(1-prob[i])
@@ -526,8 +524,7 @@ lift4_rf <- p_sub4_rf-p_sub3_rf
 lift5_rf <- p_sub5_rf-p_sub4_rf
 
 #Compute number of calls to target for a given customer (N.B.: As long as probability of success is declining monotonically, as soon as the nth call is not profitable, the (n+1)th call will also not be profitable.) 
-  #Test: Identify whether the nth call (if made) would be profitable. THis is simple:
-   #Profit(n|All calls prior="no")=[Profit of Success]*p_sub(n) -[Cost of Failure]*(1-p_sub(n)) 
+  #Test: Identify whether the nth call (if made) would be profitable: Profit(n|All calls prior="no")=[Profit of Success]*p_sub(n) -[Cost of Failure]*(1-p_sub(n)) 
 
 profit1_rf <- Success_profit*prob1_rf - fail_cost*(1-prob1_rf)
 profit2_rf <- Success_profit*prob2_rf - fail_cost*(1-prob2_rf)
