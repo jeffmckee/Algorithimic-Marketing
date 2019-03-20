@@ -165,6 +165,8 @@ fboost <- gbm(Class~.,           # regression model
            shrinkage=0.1           # Shrinkage parameter, weak predictor
            )
 
+varImp(fboost, numTrees = 500)
+
 # Returned Values, Returned predictor
 # Making prediction
 cat('RMSE is',sqrt(mean((df_test$Class-log_prob(predict(fboost,newdata=df_test,n.trees=500)))^2)),'\n')
@@ -659,12 +661,30 @@ fail_calls_gbm <- ifelse(calls_to_make_gbm>=df_test$campaign,ifelse(!df_test$Cla
 ```
 
 ```{r}
+# set.seed(99)
+# df_test$Max_calls_random <- sample(0:5,nrow(df_test),replace=TRUE)
+```
+
+```{r}
 # save(df_test,file='df_test.rda')
 
 load(file='df_test.rda')
 ```
 
 ```{r}
+#compute profit of calling customers randomly
+random_profit <-0
+for (x in 1:nrow(df_test)) {
+  if  (df_test$campaign[x]>df_test$Max_calls_random[x]){
+       random_profit<-random_profit-df_test$Max_calls_random[x]*fail_cost 
+      } else {
+                if(df_test$Class[x]=="FALSE"){ 
+                  random_profit<-random_profit-df_test$campaign[x]*fail_cost
+                  } else { random_profit<-random_profit+Success_profit-(df_test$campaign[x]-1)*fail_cost}
+              }
+}
+random_profit
+
 #compute profit of calling all (as called)
 baseline_profit <-0
 for (x in 1:nrow(df_test)) {
@@ -771,8 +791,8 @@ regression_tree_profit <- -fail_cost*sum(fail_calls_tree) + Success_profit*sum(s
 rf_profit <- -fail_cost*sum(fail_calls_rf) + Success_profit*sum(success_calls_rf>0)
 gbm_profit <- -fail_cost*sum(fail_calls_gbm) + Success_profit*sum(success_calls_gbm>0)
 
-profit_plot <- barplot(c(baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit, gbm_profit), names = c("baseline","two-call","three-call","logit","lasso","gbm"),ylim=c(0,10000), main="Profits by Strategy", xlab="Strategy", ylab="Profit")
-text(profit_plot,c(baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit, gbm_profit)+300, labels=format(c(baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit, gbm_profit),digits=0))
+profit_plot <- barplot(c(random_profit,baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit, gbm_profit), names = c("random","baseline","two-call","three-call","logit","lasso","gbm"),ylim=c(0,10000), main="Profits by Strategy", xlab="Strategy", ylab="Profit")
+text(profit_plot,c(random_profit,baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit, gbm_profit)+300, labels=format(c(random_profit,baseline_profit,two_call_profit,three_call_profit,logit_profit,lasso_profit, gbm_profit),digits=0))
 ```
 
 ```{r}
